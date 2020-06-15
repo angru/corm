@@ -259,7 +259,7 @@ assert john.dict() == {
 }
 ```
 
-## Миграция в между хранилищами
+## Миграция экземпляров сущностей между хранилищами
 
 ```python
 from corm import Storage, Model, Field
