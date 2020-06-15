@@ -1,13 +1,7 @@
 import enum
 
 
-class RelationType(enum.Enum):
-    CHILD_OF = 'CHILD_OF'
-    PARENT_OF = 'PARENT_OF'
-    RELATED = 'RELATED'
-
-
-class AccessMode:
+class AccessMode(int, enum.Enum):
     GET = 1
     SET = 1 << 1
     LOAD = 1 << 2
@@ -19,3 +13,9 @@ class AccessMode:
     GET_LOAD_DUMP = GET | LOAD | DUMP
 
     ALL = GET | SET | LOAD | DUMP
+
+
+class RelationType(int, enum.Enum):
+    PARENT = 1
+    CHILD = 2
+    RELATED = 3

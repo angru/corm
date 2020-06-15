@@ -6,19 +6,6 @@ if t.TYPE_CHECKING:
     from corm.model import Model
     from corm.storage import Storage
 
-#
-# class Path:
-#     def __init__(self, *fields: t.List['Field']):
-#         self._fields: t.List['Field'] = fields
-#
-#     def match(self, field: 'Field') -> bool:
-#         pass
-#
-#     def get(self, data: dict):
-#         for field in self._fields:
-#             if field.name in data:
-#                 if field
-
 
 def proxy_factory(value: t.Any) -> t.Callable[[], t.Any]:
     def proxy():
@@ -34,7 +21,7 @@ class Field:
     default: t.Callable[[], t.Any]
 
     def __init__(
-            self, pk: bool = False, mode: int = constants.AccessMode.ALL,
+            self, pk: bool = False, mode: constants.AccessMode = constants.AccessMode.ALL,
             default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
     ):
         self.pk = pk
@@ -56,12 +43,18 @@ class Field:
 
     def __set_name__(self, owner, name):
         self.name = name
+        self.owner = owner
 
-    def load(self, data, instance: 'Model') -> t.Any:
+    def load(self, data: dict, instance: 'Model') -> t.Any:
+        data = data.get(self.name, ...)
+
         if data is ... and self.default is not ...:
             return self.default()
 
         return data
+
+    def __repr__(self):
+        return f'<Field[{self.owner.__name__}.{self.name}]>'
 
 
 class Nested(Field):
@@ -69,9 +62,9 @@ class Nested(Field):
             self,
             entity_type: t.Union[str, t.Type['Model']],
             many: bool = False,
-            relation_type: constants.RelationType = constants.RelationType.RELATED,
+            relation_type: constants.RelationType = constants.RelationType.PARENT,
             back_relation_type: t.Optional[constants.RelationType] = None,
-            mode: int = constants.AccessMode.ALL,
+            mode: constants.AccessMode = constants.AccessMode.ALL,
             default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
     ):
         super().__init__(mode=mode, default=default)
@@ -92,14 +85,14 @@ class Nested(Field):
         entity = self.entity_type(data=data, storage=storage)
 
         if self.relation_type:
-            storage.make_relation(from_=parent, relation_type=self.relation_type, to_=entity)
+            storage.make_relation(from_=parent, to_=entity, relation_type=self.relation_type)
 
         if self.back_relation_type:
-            storage.make_relation(from_=entity, relation_type=self.back_relation_type, to_=parent)
+            storage.make_relation(from_=entity, to_=parent, relation_type=self.back_relation_type)
 
     def load(self, data, instance: 'Model') -> t.NoReturn:
-        storage = instance._storage
         data = super().load(data, instance)
+        storage = instance._storage
 
         if data is not ...:
             if self.many:
@@ -111,13 +104,13 @@ class Nested(Field):
         return data
 
     def __get__(self, instance: 'Model', owner):
-        if instance:
-            if self.many:
-                return instance._storage.get_related_entities(instance, self.entity_type, self.relation_type)
-            else:
-                return instance._storage.get_one_related_entity(instance, self.entity_type, self.relation_type)
-        else:
+        if not instance:
             return super().__get__(instance, owner)
+
+        if self.many:
+            return instance._storage.get_related_entities(instance, self.entity_type, self.relation_type)
+        else:
+            return instance._storage.get_one_related_entity(instance, self.entity_type, self.relation_type)
 
     def __set__(self, instance, value):
         raise NotImplementedError
@@ -127,32 +120,59 @@ class Relationship(Nested):
     def __init__(
             self,
             entity_type: t.Union[str, t.Type['Model']],
-            relation_type: constants.RelationType = constants.RelationType.RELATED,
+            relation_type: constants.RelationType,
             many: bool = False,
-            mode: int = constants.AccessMode.GET,
+            mode: constants.AccessMode = constants.AccessMode.GET,
             default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
     ):
         super().__init__(entity_type=entity_type, relation_type=relation_type, many=many, mode=mode, default=default)
 
 
-class KeyRelationship(Field):
+class NestedKey(Field):
     def __init__(
             self,
-            related_entity_field,
+            related_entity_field: t.Union['Field', t.Any],
             key: str,
+            back_relation_type: t.Optional[constants.RelationType] = None,
             many: bool = False,
-            mode: int = constants.AccessMode.GET,
+            mode: constants.AccessMode = constants.AccessMode.GET_LOAD,
     ):
-        super().__init__(mode=mode)
-
         if not related_entity_field.pk:
             raise ValueError(f'{related_entity_field} is not primary key field')
+
+        super().__init__(mode=mode)
 
         self.related_entity_field = related_entity_field
         self.key = key
         self.many = many
+        self.back_relation_type = back_relation_type
+
+    def _load_one(self, data: t.Any, storage: 'Storage', parent: 'Model'):
+        if self.back_relation_type:
+            storage.make_key_relation(
+                field_from=self.related_entity_field,
+                key_from=data,
+                relation_type=self.back_relation_type,
+                to=parent,
+            )
+
+    def load(self, data: dict, instance: 'Model') -> t.Any:
+        storage = instance._storage
+        data = data.get(self.key, ...)
+
+        if data is not ...:
+            if self.many:
+                for item in data:
+                    self._load_one(item, storage, instance)
+            else:
+                self._load_one(data, storage, instance)
+
+        return data
 
     def __get__(self, instance: 'Model', owner):
+        if not instance:
+            return super().__get__(instance, owner)
+
         data = instance._data.get(self.key)
 
         if data is not None:
@@ -170,9 +190,56 @@ class KeyRelationship(Field):
             else:
                 return instance._storage.get(self.related_entity_field, data)
 
+
+class KeyRelationship(Field):
+    def __init__(
+            self,
+            entity_type: t.Union[str, t.Type['Model']],
+            field_name: str, relation_type: constants.RelationType,
+            many: bool = False,
+            mode: constants.AccessMode = constants.AccessMode.GET,
+    ):
+        super().__init__(mode=mode)
+
+        self._entity_type = entity_type
+        self.field_name = field_name
+        self.relation_type = relation_type
+        self.many = many
+
     @property
     def entity_type(self) -> t.Type['Model']:
-        if isinstance(self.related_entity_field, str):
-            self.related_entity_field = registry.get(self.related_entity_field)
+        if isinstance(self._entity_type, str):
+            self._entity_type = registry.get(self._entity_type)
 
-        return self.related_entity_field
+        return self._entity_type
+
+    def __get__(self, instance: 'Model', owner: t.Type['Model']):
+        if not instance:
+            return super().__get__(instance, owner)
+
+        field = instance.__fields__[self.field_name]
+        key = getattr(instance, self.field_name, None)
+
+        if self.many:
+            return instance._storage.get_key_relations(
+                field_from=field,
+                key_from=key,
+                relation_type=self.relation_type,
+                to=self.entity_type,
+            )
+        else:
+            return instance._storage.get_one_key_related_entity(
+                field_from=field,
+                key_from=key,
+                relation_type=self.relation_type,
+                to=self.entity_type,
+            )
+
+# class EntityRef:
+#     def __init__(self, key: t.Any, field: Field, storage: 'Storage'):
+#         self.key = key
+#         self.field = field
+#         self.storage = storage
+#
+#     def get(self):
+#         return self.storage.get(self.field, self.key)

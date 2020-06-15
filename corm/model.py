@@ -5,6 +5,7 @@ from corm.fields import Field
 
 if t.TYPE_CHECKING:
     from corm.storage import Storage
+    from corm.hooks import Hook
 
 
 class ModelMeta(type):
@@ -61,12 +62,12 @@ class Model(metaclass=ModelMeta):
 
         for name, field in self.__fields__.items():
             if field.mode & constants.AccessMode.LOAD:
-                value = field.load(data.get(name, ...), self)
+                value = field.load(data, self)
 
                 if value is not ...:
                     data[name] = value
 
-    def dict(self, strip_none=False):
+    def dict(self, strip_none=False, hooks: t.Optional[t.List['Hook']] = None):
         data = self._data
 
         for name, field in self.__fields__.items():
