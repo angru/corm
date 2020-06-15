@@ -219,7 +219,7 @@ class ExcludeHook(Hook):
 
 john = User({'id': 1, 'name': 'John', 'address': {'id': 2, 'street': 'First', 'number': 1}}, storage)
 
-assert john.dict(hooks=[ExcludeHook(exclude_fields= ['id'])]) == {
+assert john.dict(hooks=[ExcludeHook(exclude_fields=['id'])]) == {
     'name': 'John', 
     'address': {'street': 'First', 'number': 1},
 }
