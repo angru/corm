@@ -117,25 +117,25 @@ import typing as t
 
 from corm import Storage, Model, Relationship, Nested, RelationType
 
-    class Item(Model):
-        id: int
-        items: t.List['Item'] = Nested(entity_type='Item', many=True, back_relation_type=RelationType.CHILD)
-        parent: 'Item' = Relationship(entity_type='Item', relation_type=RelationType.CHILD)
+class Item(Model):
+    id: int
+    items: t.List['Item'] = Nested(entity_type='Item', many=True, back_relation_type=RelationType.CHILD)
+    parent: 'Item' = Relationship(entity_type='Item', relation_type=RelationType.CHILD)
 
-    storage = Storage()
-    item1 = Item({'id': 1, 'items': [{'id': 2}, {'id': 3}]}, storage)
-    item2, item3 = item1.items
+storage = Storage()
+item1 = Item({'id': 1, 'items': [{'id': 2}, {'id': 3}]}, storage)
+item2, item3 = item1.items
 
-    assert item1.id == 1
-    assert item1.parent is None
+assert item1.id == 1
+assert item1.parent is None
 
-    assert item2.id == 2
-    assert item2.parent == item1
-    assert item2.items == []
+assert item2.id == 2
+assert item2.parent == item1
+assert item2.items == []
 
-    assert item3.id == 3
-    assert item3.parent == item1
-    assert item3.items == []
+assert item3.id == 3
+assert item3.parent == item1
+assert item3.items == []
 ```
 
 ## Связи по ключу
