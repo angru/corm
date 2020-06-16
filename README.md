@@ -2,7 +2,7 @@
 
 Библиотека для создания обьектных оберток над структурами данных и описания связей между ними
 
-https://github.com/angru/corm/workflows/python-package/badge.svg
+![](https://github.com/angru/corm/workflows/build/badge.svg)
 
 # Мотивация
 
