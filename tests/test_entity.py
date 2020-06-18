@@ -2,13 +2,13 @@ import typing as t
 
 import pytest
 
-from corm import Model, Field, Storage, Nested, Relationship, NestedKey, RelationType, KeyRelationship
+from corm import Entity, Field, Storage, Nested, Relationship, NestedKey, RelationType, KeyRelationship
 
 
-def test_base_model():
+def test_base_entity():
     storage = Storage()
 
-    class User(Model):
+    class User(Entity):
         id: int
         name: str = Field(default='Bob')
 
@@ -25,10 +25,10 @@ def test_base_model():
 def test_nested():
     storage = Storage()
 
-    class Address(Model):
+    class Address(Entity):
         street: str
 
-    class User(Model):
+    class User(Entity):
         id: int
         name: str = Field(default='Bob')
         address: Address = Nested(entity_type=Address)
@@ -42,16 +42,16 @@ def test_nested():
 
 
 def test_relationship():
-    class Entity(Model):
+    class SomeEntity(Entity):
         name: str
 
-    class EntityHolder(Model):
+    class EntityHolder(SomeEntity):
         name: str
-        entity: Entity = Relationship(entity_type=Entity, relation_type=RelationType.CHILD)
+        entity: SomeEntity = Relationship(entity_type=SomeEntity, relation_type=RelationType.CHILD)
 
     storage = Storage()
     holder = EntityHolder(data={'name': 'holder'}, storage=storage)
-    entity1 = Entity(data={'name': 'entity1'}, storage=storage)
+    entity1 = SomeEntity(data={'name': 'entity1'}, storage=storage)
 
     assert holder.entity is None
 
@@ -59,12 +59,12 @@ def test_relationship():
 
     assert holder.entity == entity1
 
-    class ManyEntityHolder(Model):
+    class ManyEntityHolder(SomeEntity):
         name: str
-        entities: t.List[Entity] = Relationship(entity_type=Entity, many=True, relation_type=RelationType.CHILD)
+        entities: t.List[SomeEntity] = Relationship(entity_type=SomeEntity, many=True, relation_type=RelationType.CHILD)
 
     holder = ManyEntityHolder(data={'mane': 'many holder'}, storage=storage)
-    entity2 = Entity(data={'name': 'entity2'}, storage=storage)
+    entity2 = SomeEntity(data={'name': 'entity2'}, storage=storage)
 
     storage.make_relation(from_=holder, to_=entity1, relation_type=RelationType.CHILD)
     storage.make_relation(from_=holder, to_=entity2, relation_type=RelationType.CHILD)
@@ -76,35 +76,35 @@ def test_relationship():
 
 
 def test_nested_key():
-    class Entity(Model):
+    class SomeEntity(Entity):
         id: int = Field(pk=True)
         name: str
 
-    class EntityHolder(Model):
+    class EntityHolder(SomeEntity):
         name: str
-        entity: Entity = NestedKey(Entity.id, 'entity_id')
+        entity: SomeEntity = NestedKey(SomeEntity.id, 'entity_id')
 
     storage = Storage()
-    entity = Entity({'id': 123, 'name': 'entity'}, storage=storage)
+    entity = SomeEntity({'id': 123, 'name': 'entity'}, storage=storage)
     holder = EntityHolder({'entity_id': 123}, storage=storage)
 
     assert holder.entity == entity
     assert holder.name is None
 
-    class ManyEntityHolder(Model):
+    class ManyEntityHolder(SomeEntity):
         name: str
-        entities: t.List[Entity] = NestedKey(related_entity_field=Entity.id, key='entity_ids', many=True)
+        entities: t.List[SomeEntity] = NestedKey(related_entity_field=SomeEntity.id, key='entity_ids', many=True)
 
     storage = Storage()
-    entity1 = Entity({'id': 123, 'name': 'entity1'}, storage=storage)
-    entity2 = Entity({'id': 321, 'name': 'entity2'}, storage=storage)
+    entity1 = SomeEntity({'id': 123, 'name': 'entity1'}, storage=storage)
+    entity2 = SomeEntity({'id': 321, 'name': 'entity2'}, storage=storage)
     holder = ManyEntityHolder({'entity_ids': [123, 321]}, storage=storage)
 
     assert holder.entities == [entity1, entity2]
 
     storage = Storage()
-    Entity({'id': 123, 'name': 'entity1'}, storage=storage)
-    Entity({'id': 321, 'name': 'entity2'}, storage=storage)
+    SomeEntity({'id': 123, 'name': 'entity1'}, storage=storage)
+    SomeEntity({'id': 321, 'name': 'entity2'}, storage=storage)
     holder = ManyEntityHolder({'entity_ids': [123, 99999]}, storage=storage)
 
     with pytest.raises(ValueError):
@@ -112,21 +112,21 @@ def test_nested_key():
 
 
 def test_key_relationship():
-    class Entity(Model):
+    class SomeEntity(Entity):
         id: int = Field(pk=True)
         name: str
         holder: 'EntityHolder' = KeyRelationship(
             entity_type='EntityHolder', field_name='id', relation_type=RelationType.CHILD,
         )
 
-    class EntityHolder(Model):
+    class EntityHolder(SomeEntity):
         name: str
-        entity: Entity = NestedKey(
-            related_entity_field=Entity.id, key='entity_id', back_relation_type=RelationType.CHILD,
+        entity: SomeEntity = NestedKey(
+            related_entity_field=SomeEntity.id, key='entity_id', back_relation_type=RelationType.CHILD,
         )
 
     storage = Storage()
-    entity = Entity({'id': 123, 'name': 'entity'}, storage=storage)
+    entity = SomeEntity({'id': 123, 'name': 'entity'}, storage=storage)
     holder = EntityHolder({'name': 'holder', 'entity_id': 123}, storage=storage)
 
     assert holder.entity == entity
@@ -135,7 +135,7 @@ def test_key_relationship():
 
 
 def test_same_pk():
-    class User(Model):
+    class User(Entity):
         id: int = Field(pk=True)
 
     storage = Storage()
@@ -146,7 +146,7 @@ def test_same_pk():
 
 
 def multiple_primary_keys():
-    class User(Model):
+    class User(Entity):
         id: int = Field(pk=True)
         guid: str = Field(pk=True)
         name: str
@@ -160,7 +160,7 @@ def multiple_primary_keys():
 
 
 def test_self_related():
-    class Item(Model):
+    class Item(Entity):
         id: int
         items: t.List['Item'] = Nested(entity_type='Item', many=True, back_relation_type=RelationType.CHILD)
         parent: 'Item' = Relationship(entity_type='Item', relation_type=RelationType.CHILD)

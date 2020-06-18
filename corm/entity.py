@@ -8,13 +8,13 @@ if t.TYPE_CHECKING:
     from corm.hooks import Hook
 
 
-class ModelMeta(type):
+class EntityMeta(type):
     def __new__(mcs, name, bases, attrs: t.Dict[str, t.Any]):
         fields = {}
         pk_fields = []
 
         for base in bases:
-            if issubclass(base, Model) and base != Model:
+            if issubclass(base, Entity) and base != Entity:
                 fields.update(base.__fields__)
 
         annotations = attrs.get('__annotations__') or {}
@@ -47,7 +47,7 @@ class ModelMeta(type):
         return klass
 
 
-class Model(metaclass=ModelMeta):
+class Entity(metaclass=EntityMeta):
     _data: t.Dict[str, t.Any]
     _storage: 'Storage'
     __pk_fields__: t.Optional[t.List[Field]] = None
@@ -77,7 +77,7 @@ class Model(metaclass=ModelMeta):
                 if strip_none and value is None:
                     continue
 
-                if isinstance(value, Model):
+                if isinstance(value, Entity):
                     value = value.dict(strip_none=strip_none)
 
                 data[name] = value

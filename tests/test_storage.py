@@ -1,8 +1,8 @@
-from corm import Model, Field, Storage
+from corm import Entity, Field, Storage
 
 
 def test_add_by_primary_key():
-    class User(Model):
+    class User(Entity):
         id: int = Field(pk=True)
 
     storage = Storage()

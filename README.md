@@ -14,12 +14,12 @@
 
 ## Простая модель
 ```python
-from corm import Storage, Model, Field
+from corm import Storage, Entity, Field
 
 
 storage = Storage()
 
-class User(Model):
+class User(Entity):
     id: int = Field(pk=True)
     name: str
 
@@ -36,7 +36,7 @@ assert storage.get(User.id, 1) == john
 
 storage = Storage()
 
-class User(Model):
+class User(Entity):
     id: int = Field(pk=True)
     name: str
 
@@ -46,16 +46,16 @@ assert john.dict() == {'id': 1, 'name': 'John', 'address': 'kirova 1'}
 
 ## Связи между сущностями
 ```python
-from corm import Storage, Model, Relationship, RelationType
+from corm import Storage, Entity, Relationship, RelationType
 
 
 storage = Storage()
 
-class Address(Model):
+class Address(Entity):
     street: str
     number: int
 
-class User(Model):
+class User(Entity):
     name: str
     address: Address = Relationship(entity_type=Address, relation_type=RelationType.PARENT)
 
@@ -70,16 +70,16 @@ assert john.address == address
 
 ## Вложенные сущности
 ```python
-from corm import Storage, Model, Nested
+from corm import Storage, Entity, Nested
 
 
 storage = Storage()
 
-class Address(Model):
+class Address(Entity):
     street: str
     number: int
 
-class User(Model):
+class User(Entity):
     name: str
     address: Address = Nested(entity_type=Address)
 
@@ -93,17 +93,17 @@ assert john.address.number == 1
 ## Двусторонние связи
 
 ```python
-from corm import Storage, Model, Relationship, Nested, RelationType
+from corm import Storage, Entity, Relationship, Nested, RelationType
 
 
 storage = Storage()
 
-class Address(Model):
+class Address(Entity):
     street: str
     number: int
     user: 'User' = Relationship(entity_type='User', relation_type=RelationType.CHILD)
 
-class User(Model):
+class User(Entity):
     name: str
     address: Address = Nested(entity_type=Address, back_relation_type=RelationType.CHILD)
 
@@ -117,9 +117,9 @@ assert john.address.user == john
 ```python
 import typing as t
 
-from corm import Storage, Model, Relationship, Nested, RelationType
+from corm import Storage, Entity, Relationship, Nested, RelationType
 
-class Item(Model):
+class Item(Entity):
     id: int
     items: t.List['Item'] = Nested(entity_type='Item', many=True, back_relation_type=RelationType.CHILD)
     parent: 'Item' = Relationship(entity_type='Item', relation_type=RelationType.CHILD)
@@ -142,13 +142,13 @@ assert item3.items == []
 
 ## Связи по ключу
 ```python
-from corm import Storage, Model, NestedKey, Field
+from corm import Storage, Entity, NestedKey, Field
 
-class Entity(Model):
+class Entity(Entity):
     id: int = Field(pk=True)
     name: str
 
-class EntityHolder(Model):
+class EntityHolder(Entity):
     name: str
     entity: Entity = NestedKey(Entity.id, 'entity_id')
 
@@ -162,16 +162,16 @@ assert holder.entity == entity
 ## Двусторонние связи по ключу
 
 ```python
-from corm import Storage, Field, Model, NestedKey, KeyRelationship, RelationType
+from corm import Storage, Field, Entity, NestedKey, KeyRelationship, RelationType
 
-class Entity(Model):
+class Entity(Entity):
     id: int = Field(pk=True)
     name: str
     holder: 'EntityHolder' = KeyRelationship(
         entity_type='EntityHolder', field_name='id', relation_type=RelationType.CHILD,
     )
 
-class EntityHolder(Model):
+class EntityHolder(Entity):
     name: str
     entity: Entity = NestedKey(
         related_entity_field=Entity.id, key='entity_id', back_relation_type=RelationType.CHILD,
@@ -193,16 +193,16 @@ assert entity.holder == holder
 ```python
 import typing as t
 
-from corm import Storage, Model, Nested, Hook
+from corm import Storage, Entity, Nested, Hook
 
 storage = Storage()
 
-class Address(Model):
+class Address(Entity):
     id: int
     street: str
     number: int
 
-class User(Model):
+class User(Entity):
     id: int
     name: str
     address: Address = Nested(entity_type=Address)
@@ -234,16 +234,16 @@ assert john.dict(hooks=[ExcludeHook(exclude_fields=['id'])]) == {
 ```python
 import typing as t
 
-from corm import Storage, Model, Nested
+from corm import Storage, Entity, Nested
 
 
 storage = Storage()
 
-class Address(Model):
+class Address(Entity):
     street: str
     number: int
 
-class User(Model):
+class User(Entity):
     name: str
     addresses: t.List[Address] = Nested(entity_type=Address, many=True)
 
@@ -266,10 +266,10 @@ assert john.dict() == {
 ## Миграция экземпляров сущностей между хранилищами
 
 ```python
-from corm import Storage, Model, Field
+from corm import Storage, Entity, Field
 
 
-class User(Model):
+class User(Entity):
     id: int = Field(pk=True)
 
 storage1 = Storage()
@@ -285,9 +285,9 @@ assert storage2.get(User.id, 1) is user
 ## Query API
 
 ```python
-from corm import Storage, Model
+from corm import Storage, Entity
 
-class User(Model):
+class User(Entity):
     name: str
 
 storage = Storage()

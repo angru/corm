@@ -3,7 +3,7 @@ import typing as t
 from corm import constants, registry
 
 if t.TYPE_CHECKING:
-    from corm.model import Model
+    from corm.entity import Entity
     from corm.storage import Storage
 
 
@@ -32,20 +32,20 @@ class Field:
 
         self.default = default
 
-    def __get__(self, instance: 'Model', owner):
+    def __get__(self, instance: 'Entity', owner):
         if instance:
             return instance._data.get(self.name)
         else:
             return self
 
-    def __set__(self, instance: 'Model', value):
+    def __set__(self, instance: 'Entity', value):
         instance._data[self.name] = value
 
     def __set_name__(self, owner, name):
         self.name = name
         self.owner = owner
 
-    def load(self, data: dict, instance: 'Model') -> t.Any:
+    def load(self, data: dict, instance: 'Entity') -> t.Any:
         data = data.get(self.name, ...)
 
         if data is ... and self.default is not ...:
@@ -60,7 +60,7 @@ class Field:
 class Nested(Field):
     def __init__(
             self,
-            entity_type: t.Union[str, t.Type['Model']],
+            entity_type: t.Union[str, t.Type['Entity']],
             many: bool = False,
             relation_type: constants.RelationType = constants.RelationType.PARENT,
             back_relation_type: t.Optional[constants.RelationType] = None,
@@ -75,13 +75,13 @@ class Nested(Field):
         self.back_relation_type = back_relation_type
 
     @property
-    def entity_type(self) -> t.Type['Model']:
+    def entity_type(self) -> t.Type['Entity']:
         if isinstance(self._entity_type, str):
             self._entity_type = registry.get(self._entity_type)
 
         return self._entity_type
 
-    def _load_one(self, data: t.Any, storage: 'Storage', parent: 'Model'):
+    def _load_one(self, data: t.Any, storage: 'Storage', parent: 'Entity'):
         entity = self.entity_type(data=data, storage=storage)
 
         if self.relation_type:
@@ -90,7 +90,7 @@ class Nested(Field):
         if self.back_relation_type:
             storage.make_relation(from_=entity, to_=parent, relation_type=self.back_relation_type)
 
-    def load(self, data, instance: 'Model') -> t.NoReturn:
+    def load(self, data, instance: 'Entity') -> t.NoReturn:
         data = super().load(data, instance)
         storage = instance._storage
 
@@ -103,7 +103,7 @@ class Nested(Field):
 
         return data
 
-    def __get__(self, instance: 'Model', owner):
+    def __get__(self, instance: 'Entity', owner):
         if not instance:
             return super().__get__(instance, owner)
 
@@ -119,7 +119,7 @@ class Nested(Field):
 class Relationship(Nested):
     def __init__(
             self,
-            entity_type: t.Union[str, t.Type['Model']],
+            entity_type: t.Union[str, t.Type['Entity']],
             relation_type: constants.RelationType,
             many: bool = False,
             mode: constants.AccessMode = constants.AccessMode.GET,
@@ -147,7 +147,7 @@ class NestedKey(Field):
         self.many = many
         self.back_relation_type = back_relation_type
 
-    def _load_one(self, data: t.Any, storage: 'Storage', parent: 'Model'):
+    def _load_one(self, data: t.Any, storage: 'Storage', parent: 'Entity'):
         if self.back_relation_type:
             storage.make_key_relation(
                 field_from=self.related_entity_field,
@@ -156,7 +156,7 @@ class NestedKey(Field):
                 to=parent,
             )
 
-    def load(self, data: dict, instance: 'Model') -> t.Any:
+    def load(self, data: dict, instance: 'Entity') -> t.Any:
         storage = instance._storage
         data = data.get(self.key, ...)
 
@@ -169,7 +169,7 @@ class NestedKey(Field):
 
         return data
 
-    def __get__(self, instance: 'Model', owner):
+    def __get__(self, instance: 'Entity', owner):
         if not instance:
             return super().__get__(instance, owner)
 
@@ -194,7 +194,7 @@ class NestedKey(Field):
 class KeyRelationship(Field):
     def __init__(
             self,
-            entity_type: t.Union[str, t.Type['Model']],
+            entity_type: t.Union[str, t.Type['Entity']],
             field_name: str, relation_type: constants.RelationType,
             many: bool = False,
             mode: constants.AccessMode = constants.AccessMode.GET,
@@ -207,13 +207,13 @@ class KeyRelationship(Field):
         self.many = many
 
     @property
-    def entity_type(self) -> t.Type['Model']:
+    def entity_type(self) -> t.Type['Entity']:
         if isinstance(self._entity_type, str):
             self._entity_type = registry.get(self._entity_type)
 
         return self._entity_type
 
-    def __get__(self, instance: 'Model', owner: t.Type['Model']):
+    def __get__(self, instance: 'Entity', owner: t.Type['Entity']):
         if not instance:
             return super().__get__(instance, owner)
 
