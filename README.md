@@ -2,9 +2,17 @@
 
 Библиотека для создания обьектных оберток над структурами данных и описания связей между ними
 
-![](https://github.com/angru/corm/workflows/build/badge.svg)
+[![build](https://github.com/angru/corm/workflows/build/badge.svg)](https://github.com/angru/corm/actions?query=workflow%3Abuild+branch%3Amaster++)
 
-# Мотивация
+## Help
+
+See [documentation](https://angru.github.io/corm/) for more details.
+
+## Installation
+
+`pip install corm`
+
+# Rationate
 
 * сложно помнить ключи словарей, если структура данных большая
 * организация двусторонних связей между сущностями, особенно иерархических структурах данных
@@ -68,27 +76,6 @@ storage.make_relation(from_=john, to_=address, relation_type=RelationType.PARENT
 assert john.address == address
 ```
 
-## Вложенные сущности
-```python
-from corm import Storage, Entity, Nested
-
-
-storage = Storage()
-
-class Address(Entity):
-    street: str
-    number: int
-
-class User(Entity):
-    name: str
-    address: Address = Nested(entity_type=Address)
-
-
-john = User({'name': 'John', 'address': {'street': 'First', 'number': 1}}, storage)
-
-assert john.address.street == 'First'
-assert john.address.number == 1
-```
 
 ## Двусторонние связи
 

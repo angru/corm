@@ -1,0 +1,15 @@
+site_name: corm
+theme:
+  name: material
+
+repo_name: angru/corm
+repo_url: https://github.com/angru/corm
+
+nav:
+  - Overview: index.md
+  - usage.md
+  - FAQ: faq.md
+
+markdown_extensions:
+  - codehilite
+  - admonition
