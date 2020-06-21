@@ -22,10 +22,10 @@ class Field:
     default: t.Callable[[], t.Any]
 
     def __init__(
-            self,
-            pk: bool = False,
-            mode: AccessMode = AccessMode.ALL,
-            default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
+        self,
+        pk: bool = False,
+        mode: AccessMode = AccessMode.ALL,
+        default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
     ):
         self.pk = pk
         self.mode = mode
@@ -62,13 +62,13 @@ class Field:
 
 class Nested(Field):
     def __init__(
-            self,
-            entity_type: t.Union[str, t.Type['Entity']],
-            many: bool = False,
-            relation_type: RelationType = RelationType.PARENT,
-            back_relation_type: t.Optional[RelationType] = None,
-            mode: AccessMode = AccessMode.ALL,
-            default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
+        self,
+        entity_type: t.Union[str, t.Type['Entity']],
+        many: bool = False,
+        relation_type: RelationType = RelationType.PARENT,
+        back_relation_type: t.Optional[RelationType] = None,
+        mode: AccessMode = AccessMode.ALL,
+        default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
     ):
         super().__init__(mode=mode, default=default)
 
@@ -89,12 +89,15 @@ class Nested(Field):
 
         if self.relation_type:
             storage.make_relation(
-                from_=parent, to_=entity, relation_type=self.relation_type,
+                from_=parent,
+                to_=entity,
+                relation_type=self.relation_type,
             )
 
         if self.back_relation_type:
             storage.make_relation(
-                from_=entity, to_=parent,
+                from_=entity,
+                to_=parent,
                 relation_type=self.back_relation_type,
             )
 
@@ -117,11 +120,15 @@ class Nested(Field):
 
         if self.many:
             return instance.storage.get_related_entities(
-                instance, self.entity_type, self.relation_type,
+                instance,
+                self.entity_type,
+                self.relation_type,
             )
         else:
             return instance.storage.get_one_related_entity(
-                instance, self.entity_type, self.relation_type,
+                instance,
+                self.entity_type,
+                self.relation_type,
             )
 
     def __set__(self, instance, value):
@@ -130,29 +137,30 @@ class Nested(Field):
 
 class Relationship(Nested):
     def __init__(
-            self,
-            entity_type: t.Union[str, t.Type['Entity']],
-            relation_type: RelationType,
-            many: bool = False,
-            mode: AccessMode = AccessMode.GET,
-            default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
+        self,
+        entity_type: t.Union[str, t.Type['Entity']],
+        relation_type: RelationType,
+        many: bool = False,
+        mode: AccessMode = AccessMode.GET,
+        default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
     ):
         super().__init__(
             entity_type=entity_type,
             relation_type=relation_type,
-            many=many, mode=mode,
+            many=many,
+            mode=mode,
             default=default,
         )
 
 
 class NestedKey(Field):
     def __init__(
-            self,
-            related_entity_field: t.Union['Field', t.Any],
-            key: str,
-            back_relation_type: t.Optional[RelationType] = None,
-            many: bool = False,
-            mode: AccessMode = AccessMode.GET_LOAD,
+        self,
+        related_entity_field: t.Union['Field', t.Any],
+        key: str,
+        back_relation_type: t.Optional[RelationType] = None,
+        many: bool = False,
+        mode: AccessMode = AccessMode.GET_LOAD,
     ):
         if not related_entity_field.pk:
             raise ValueError(
@@ -199,7 +207,8 @@ class NestedKey(Field):
                 result = []
                 for item in data:
                     entity = instance.storage.get(
-                        self.related_entity_field, item,
+                        self.related_entity_field,
+                        item,
                     )
 
                     if not entity:
@@ -217,11 +226,12 @@ class NestedKey(Field):
 
 class KeyRelationship(Field):
     def __init__(
-            self,
-            entity_type: t.Union[str, t.Type['Entity']],
-            field_name: str, relation_type: RelationType,
-            many: bool = False,
-            mode: AccessMode = AccessMode.GET,
+        self,
+        entity_type: t.Union[str, t.Type['Entity']],
+        field_name: str,
+        relation_type: RelationType,
+        many: bool = False,
+        mode: AccessMode = AccessMode.GET,
     ):
         super().__init__(mode=mode)
 
@@ -258,6 +268,7 @@ class KeyRelationship(Field):
                 relation_type=self.relation_type,
                 to=self.entity_type,
             )
+
 
 # class EntityRef:
 #     def __init__(self, key: t.Any, field: Field, storage: 'Storage'):

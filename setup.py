@@ -5,9 +5,10 @@ from setuptools import setup
 
 def open_file(filename):
     with open(
-            os.path.join(os.path.dirname(
-                os.path.abspath(__file__)), filename,
-            ), 'r', encoding='utf-8') as f:
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), filename),
+        mode='r',
+        encoding='utf-8',
+    ) as f:
         return f.read()
 
 
