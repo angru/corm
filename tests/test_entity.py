@@ -130,7 +130,6 @@ def test_key_relationship():
     assert entity.holder == holder
 
 
-
 def test_same_pk():
     class User(Entity):
         id: int = Field(pk=True)
@@ -159,8 +158,10 @@ def multiple_primary_keys():
 def test_self_related():
     class Item(Entity):
         id: int
-        items: t.List['Item'] = Nested(entity_type='Item', many=True, back_relation_type=RelationType.CHILD)
-        parent: 'Item' = Relationship(entity_type='Item', relation_type=RelationType.CHILD)
+        items: t.List['Item'] = Nested(  # noqa: F821
+            entity_type='Item', many=True, back_relation_type=RelationType.CHILD,
+        )
+        parent: 'Item' = Relationship(entity_type='Item', relation_type=RelationType.CHILD)  # noqa: F821
 
     storage = Storage()
     item1 = Item({'id': 1, 'items': [{'id': 2}, {'id': 3}]}, storage)

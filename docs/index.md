@@ -23,7 +23,7 @@ class User(Entity):
 
 storage = Storage()
 john = User(
-    data={'name': 'John', 'address': {'street': 'First', 'number': 1}}, 
+    data={'name': 'John', 'address': {'street': 'First', 'number': 1}},
     storage=storage,
 )
 

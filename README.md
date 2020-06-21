@@ -38,9 +38,9 @@ assert john.name == 'John'
 assert john.dict() == {'id': 1, 'name': 'John'}
 assert storage.get(User.id, 1) == john
 
-# не обязательно описывать структуру данных, можно только те поля, 
+# не обязательно описывать структуру данных, можно только те поля,
 # которые нужны для работы в данный момент
-# при преобразовании в словарь все равно вернется исходный набор данных 
+# при преобразовании в словарь все равно вернется исходный набор данных
 
 storage = Storage()
 
@@ -50,7 +50,7 @@ class User(Entity):
 
 john = User({'id': 1, 'name': 'John', 'address': 'kirova 1'}, storage)
 assert john.dict() == {'id': 1, 'name': 'John', 'address': 'kirova 1'}
-```  
+```
 
 ## Связи между сущностями
 ```python
@@ -200,18 +200,18 @@ class ExcludeHook(Hook):
 
     def __init__(self, exclude_fields: t.List[str]):
         self.exclude_fields = exclude_fields
-    
+
     def go(self, data, entity):
         if type(entity) in self.match_entities:
             for field in self.exclude_fields:
                 data.pop(field, None)
-        
+
         return data
 
 john = User({'id': 1, 'name': 'John', 'address': {'id': 2, 'street': 'First', 'number': 1}}, storage)
 
 assert john.dict(hooks=[ExcludeHook(exclude_fields=['id'])]) == {
-    'name': 'John', 
+    'name': 'John',
     'address': {'street': 'First', 'number': 1},
 }
 ```
@@ -237,12 +237,12 @@ class User(Entity):
 
 john = User(data={'name': 'John', 'addresses': [{'street': 'First', 'number': 1}]}, storage=storage)
 
-additional_address = Address(data={'street': 'Second', 'number': 2}, storage=storage) 
+additional_address = Address(data={'street': 'Second', 'number': 2}, storage=storage)
 
 john.addresses.append(additional_address)
 
 assert john.dict() == {
-    'name': 'John', 
+    'name': 'John',
     'addresses': [
         {'street': 'First', 'number': 1},
         {'street': 'Second', 'number': 2},

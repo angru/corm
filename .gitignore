@@ -129,3 +129,7 @@ dmypy.json
 .pyre/
 
 .idea/
+
+.pre-commit-config.yaml
+Pipfile
+Pipfile.lock
