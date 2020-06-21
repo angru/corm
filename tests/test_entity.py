@@ -81,7 +81,6 @@ def test_nested_key():
         name: str
 
     class EntityHolder(SomeEntity):
-        name: str
         entity: SomeEntity = NestedKey(SomeEntity.id, 'entity_id')
 
     storage = Storage()
@@ -89,10 +88,8 @@ def test_nested_key():
     holder = EntityHolder({'entity_id': 123}, storage=storage)
 
     assert holder.entity == entity
-    assert holder.name is None
 
     class ManyEntityHolder(SomeEntity):
-        name: str
         entities: t.List[SomeEntity] = NestedKey(related_entity_field=SomeEntity.id, key='entity_ids', many=True)
 
     storage = Storage()
