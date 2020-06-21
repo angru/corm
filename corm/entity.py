@@ -26,7 +26,8 @@ class EntityMeta(type):
 
                     if attr_value.pk:
                         pk_fields.append(attr_value)
-                elif not attr_name.startswith('_') and attr_name in annotations:
+                elif not attr_name.startswith('_') \
+                        and attr_name in annotations:
                     fields[attr_name] = Field()
 
             for attr_name, type_ in annotations.items():
@@ -49,13 +50,13 @@ class EntityMeta(type):
 
 class Entity(metaclass=EntityMeta):
     _data: t.Dict[str, t.Any]
-    _storage: 'Storage'
+    storage: 'Storage'
     __pk_fields__: t.Optional[t.List[Field]] = None
     __fields__: t.Dict[str, Field]
 
     def __init__(self, data: t.Any, storage: 'Storage'):
         self._data = data
-        self._storage = storage
+        self.storage = storage
 
         if self.__pk_fields__:
             storage.add(self)
