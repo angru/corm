@@ -30,43 +30,76 @@ class Storage:
         return self._entities.get((field, entity_key))
 
     def make_key_relation(
-            self, field_from: 'Field', key_from: t.Any, relation_type: constants.RelationType, to: 'Entity',
+            self,
+            field_from: 'Field',
+            key_from: t.Any,
+            relation_type:
+            constants.RelationType,
+            to: 'Entity',
     ):
-        relations = self._key_relations[field_from, key_from, relation_type][type(to)]
+        relation_key = (field_from, key_from, relation_type)
+        relations = self._key_relations[relation_key][type(to)]
 
         if to not in relations:
             relations.append(to)
         else:
-            raise ValueError(f'Relation type {relation_type} already exists between {field_from}={key_from} and {to}')
+            raise ValueError(
+                f'Relation type {relation_type} already exists between '
+                f'{field_from}={key_from} and {to}'
+            )
 
     def get_key_relations(
-            self, field_from, key_from, relation_type: constants.RelationType, to: t.Type['Entity'],
-    ):
+            self,
+            field_from,
+            key_from,
+            relation_type: constants.RelationType,
+            to: t.Type['Entity'],
+    ) -> t.List['Entity']:
         return self._key_relations[field_from, key_from, relation_type][to]
 
-    def get_one_key_related_entity(self, field_from, key_from, relation_type: constants.RelationType, to: t.Type[
-        'Entity']):
-        relations = self._key_relations[field_from, key_from, relation_type][to]
+    def get_one_key_related_entity(
+            self,
+            field_from,
+            key_from,
+            relation_type: constants.RelationType,
+            to: t.Type['Entity'],
+    ) -> t.Optional['Entity']:
+        relation_key = (field_from, key_from, relation_type)
+        relations = self._key_relations[relation_key][to]
 
         if relations:
             return relations[0]
 
-    def make_relation(self, from_: 'Entity', to_: 'Entity', relation_type: constants.RelationType):
+    def make_relation(
+            self,
+            from_: 'Entity',
+            to_: 'Entity',
+            relation_type: constants.RelationType,
+    ):
         # TODO: probably weakref will be better
         relations = self._relations[from_][type(to_), relation_type]
 
         if to_ not in relations:
             relations.append(to_)
         else:
-            raise ValueError(f'Relation type {relation_type} already exists between {from_} and {to_}')
+            raise ValueError(
+                f'Relation type {relation_type} already exists '
+                f'between {from_} and {to_}'
+            )
 
     def get_related_entities(
-            self, entity: 'Entity', entity_type: t.Type['Entity'], relation_type: constants.RelationType,
+            self,
+            entity: 'Entity',
+            entity_type: t.Type['Entity'],
+            relation_type: constants.RelationType,
     ) -> t.List['Entity']:
         return self._relations[entity][entity_type, relation_type]
 
     def get_one_related_entity(
-            self, entity: 'Entity', entity_type: t.Type['Entity'], relation_type: constants.RelationType,
+            self,
+            entity: 'Entity',
+            entity_type: t.Type['Entity'],
+            relation_type: constants.RelationType,
     ) -> t.Optional['Entity']:
         entities = self._relations[entity][entity_type, relation_type]
 

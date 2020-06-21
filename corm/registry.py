@@ -4,7 +4,8 @@ _registry = {}
 def add(entity_class, name: str = None):
     if name and name in _registry:
         raise ValueError(
-            f'Entity class with name {name} already in registry. You probably should use full path to entity class '
+            f'Entity class with name {name} already in registry. '
+            f'You probably should use full path to entity class '
             f'e.g. {entity_class.__module__}.{entity_class.__name__}'
         )
 
