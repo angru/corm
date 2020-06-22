@@ -214,7 +214,7 @@ class NestedKey(Field):
                     if not entity:
                         raise ValueError(
                             f'Can\'t find {self.related_entity_field}={item} '
-                            f'in storage'
+                            f'in storage',
                         )
 
                     result.append(entity)

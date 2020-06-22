@@ -6,7 +6,7 @@ def add(entity_class, name: str = None):
         raise ValueError(
             f'Entity class with name {name} already in registry. '
             f'You probably should use full path to entity class '
-            f'e.g. {entity_class.__module__}.{entity_class.__name__}'
+            f'e.g. {entity_class.__module__}.{entity_class.__name__}',
         )
 
     if name is None:

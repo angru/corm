@@ -83,7 +83,7 @@ class Storage:
         else:
             raise ValueError(
                 f'Relation type {relation_type} already exists '
-                f'between {from_} and {to_}'
+                f'between {from_} and {to_}',
             )
 
     def get_related_entities(

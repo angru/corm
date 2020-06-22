@@ -66,7 +66,8 @@ def test_relationship():
     class EntityHolder(SomeEntity):
         name: str
         entity: SomeEntity = Relationship(
-            entity_type=SomeEntity, relation_type=RelationType.CHILD
+            entity_type=SomeEntity,
+            relation_type=RelationType.CHILD,
         )
 
     storage = Storage()
@@ -76,7 +77,9 @@ def test_relationship():
     assert holder.entity is None
 
     storage.make_relation(
-        from_=holder, to_=entity1, relation_type=RelationType.CHILD
+        from_=holder,
+        to_=entity1,
+        relation_type=RelationType.CHILD,
     )
 
     assert holder.entity == entity1
@@ -84,24 +87,32 @@ def test_relationship():
     class ManyEntityHolder(SomeEntity):
         name: str
         entities: t.List[SomeEntity] = Relationship(
-            entity_type=SomeEntity, many=True, relation_type=RelationType.CHILD
+            entity_type=SomeEntity,
+            many=True,
+            relation_type=RelationType.CHILD,
         )
 
     holder = ManyEntityHolder(data={'mane': 'many holder'}, storage=storage)
     entity2 = SomeEntity(data={'name': 'entity2'}, storage=storage)
 
     storage.make_relation(
-        from_=holder, to_=entity1, relation_type=RelationType.CHILD
+        from_=holder,
+        to_=entity1,
+        relation_type=RelationType.CHILD,
     )
     storage.make_relation(
-        from_=holder, to_=entity2, relation_type=RelationType.CHILD
+        from_=holder,
+        to_=entity2,
+        relation_type=RelationType.CHILD,
     )
 
     assert holder.entities == [entity1, entity2]
 
     with pytest.raises(ValueError):
         storage.make_relation(
-            from_=holder, to_=entity2, relation_type=RelationType.CHILD
+            from_=holder,
+            to_=entity2,
+            relation_type=RelationType.CHILD,
         )
 
 
@@ -121,7 +132,9 @@ def test_nested_key():
 
     class ManyEntityHolder(SomeEntity):
         entities: t.List[SomeEntity] = NestedKey(
-            related_entity_field=SomeEntity.id, key='entity_ids', many=True
+            related_entity_field=SomeEntity.id,
+            key='entity_ids',
+            many=True,
         )
 
     storage = Storage()
@@ -200,7 +213,8 @@ def test_self_related():
             back_relation_type=RelationType.CHILD,
         )
         parent: 'Item' = Relationship(
-            entity_type='Item', relation_type=RelationType.CHILD
+            entity_type='Item',
+            relation_type=RelationType.CHILD,
         )    # noqa: F821
 
     storage = Storage()
