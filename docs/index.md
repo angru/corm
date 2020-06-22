@@ -1,6 +1,7 @@
-_Relationships between entities_
+_Data structures relationships made easy_
 
 [![build](https://github.com/angru/corm/workflows/build/badge.svg)](https://github.com/angru/corm/actions?query=workflow%3Abuild+branch%3Amaster++)
+[![codecov](https://codecov.io/gh/angru/corm/branch/master/graph/badge.svg)](https://codecov.io/gh/angru/corm)
 
 ## Installation
 

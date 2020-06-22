@@ -7,7 +7,13 @@ repo_url: https://github.com/angru/corm
 
 nav:
   - Overview: index.md
-  - usage.md
+  - Usage:
+      - usage/entity.md
+      - usage/relationships.md
+      - usage/key-relationships.md
+      - usage/hooks.md
+      - usage/storage.md
+  - To Be Done: to-be-done.md
   - FAQ: faq.md
 
 markdown_extensions:
