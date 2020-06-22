@@ -10,7 +10,7 @@ def test_nested_key():
         id: int = Field(pk=True)
         name: str
 
-    class EntityHolder(SomeEntity):
+    class EntityHolder(Entity):
         entity: SomeEntity = NestedKey(SomeEntity.id, 'entity_id')
 
     storage = Storage()
@@ -19,7 +19,7 @@ def test_nested_key():
 
     assert holder.entity == entity
 
-    class ManyEntityHolder(SomeEntity):
+    class ManyEntityHolder(Entity):
         entities: t.List[SomeEntity] = NestedKey(
             related_entity_field=SomeEntity.id,
             key='entity_ids',

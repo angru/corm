@@ -11,7 +11,7 @@ def test_key_relationship():
             relation_type=RelationType.CHILD,
         )
 
-    class EntityHolder(SomeEntity):
+    class EntityHolder(Entity):
         name: str
         entity: SomeEntity = NestedKey(
             related_entity_field=SomeEntity.id,

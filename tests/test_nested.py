@@ -36,10 +36,12 @@ def test_self_related():
             entity_type='Item',
             many=True,
             back_relation_type=RelationType.CHILD,
+            default=list,
         )
         parent: 'Item' = Relationship(
             entity_type='Item',
             relation_type=RelationType.CHILD,
+            default=list,
         )    # noqa: F821
 
     storage = Storage()

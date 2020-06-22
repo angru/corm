@@ -42,7 +42,11 @@ class Field:
             return self
 
     def __set__(self, instance: 'Entity', value):
-        instance._data[self.name] = value
+        if instance:
+            if self.mode & AccessMode.SET:
+                instance._data[self.name] = value
+            else:
+                raise ValueError(f'Field \'{self.name}\' is read only')
 
     def __set_name__(self, owner, name):
         self.name = name
@@ -51,8 +55,13 @@ class Field:
     def load(self, data: dict, instance: 'Entity') -> t.Any:
         data = data.get(self.name, ...)
 
-        if data is ... and self.default is not ...:
-            return self.default()
+        if data is ...:
+            if self.default is not ...:
+                return self.default()
+            else:
+                raise ValueError(
+                    f'No value for field \'{self.name}\' of entity: {type(instance)}',
+                )
 
         return data
 
@@ -164,7 +173,7 @@ class NestedKey(Field):
     ):
         if not related_entity_field.pk:
             raise ValueError(
-                f'{related_entity_field} is not primary key field',
+                f'\'{related_entity_field}\' is not primary key field',
             )
 
         super().__init__(mode=mode)

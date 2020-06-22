@@ -1,6 +1,6 @@
 import pytest
 
-from corm import Entity, Field, Storage
+from corm import Entity, Field, Storage, AccessMode
 
 
 def test_base_entity():
@@ -42,7 +42,7 @@ def test_same_pk():
         User({'id': 1}, storage)
 
 
-def multiple_primary_keys():
+def test_multiple_primary_keys():
     class User(Entity):
         id: int = Field(pk=True)
         guid: str = Field(pk=True)
@@ -54,3 +54,38 @@ def multiple_primary_keys():
     assert storage.get(User.id, 1) == user
     assert storage.get(User.guid, '1234') == user
     assert storage.get(User.name, 'john') is None
+
+
+def test_change_field_value():
+    class User(Entity):
+        id: int = Field(pk=True, mode=AccessMode.GET_LOAD_DUMP)
+        guid: str = Field(pk=True)
+        name: str = Field(mode=AccessMode.GET_LOAD_DUMP)
+        description: str
+
+    storage = Storage()
+    user = User(
+        {
+            'id': 1,
+            'guid': '1234',
+            'name': 'john',
+            'description': '',
+        },
+        storage,
+    )
+
+    with pytest.raises(ValueError):
+        user.id = 2
+
+    with pytest.raises(ValueError):
+        user.name = 'Bob'
+
+    user.guid = '4321'
+    user.description = 'cool guy'
+
+    assert user.dict() == {
+        'id': 1,
+        'guid': '4321',
+        'name': 'john',
+        'description': 'cool guy',
+    }

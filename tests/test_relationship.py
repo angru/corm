@@ -9,7 +9,7 @@ def test_relationship():
     class SomeEntity(Entity):
         name: str
 
-    class EntityHolder(SomeEntity):
+    class EntityHolder(Entity):
         name: str
         entity: SomeEntity = Relationship(
             entity_type=SomeEntity,
@@ -30,7 +30,7 @@ def test_relationship():
 
     assert holder.entity == entity1
 
-    class ManyEntityHolder(SomeEntity):
+    class ManyEntityHolder(Entity):
         name: str
         entities: t.List[SomeEntity] = Relationship(
             entity_type=SomeEntity,
@@ -38,7 +38,7 @@ def test_relationship():
             relation_type=RelationType.CHILD,
         )
 
-    holder = ManyEntityHolder(data={'mane': 'many holder'}, storage=storage)
+    holder = ManyEntityHolder(data={'name': 'many holder'}, storage=storage)
     entity2 = SomeEntity(data={'name': 'entity2'}, storage=storage)
 
     storage.make_relation(
