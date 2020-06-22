@@ -23,9 +23,12 @@ def test_base_entity():
 
     assert john.id == 1
     assert john.name == 'John'
+
+    john.name = 'Not John'
+
     assert john.dict(strip_none=True) == {
         'id': 1,
-        'name': 'John',
+        'name': 'Not John',
         'description': 'john smith'
     }
 

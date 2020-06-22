@@ -20,37 +20,6 @@ See [documentation](https://angru.github.io/corm/) for more details.
 
 # Возможности
 
-## Простая модель
-```python
-from corm import Storage, Entity, Field
-
-
-storage = Storage()
-
-class User(Entity):
-    id: int = Field(pk=True)
-    name: str
-
-john = User({'id': 1, 'name': 'John'}, storage)
-
-assert john.id == 1
-assert john.name == 'John'
-assert john.dict() == {'id': 1, 'name': 'John'}
-assert storage.get(User.id, 1) == john
-
-# не обязательно описывать структуру данных, можно только те поля,
-# которые нужны для работы в данный момент
-# при преобразовании в словарь все равно вернется исходный набор данных
-
-storage = Storage()
-
-class User(Entity):
-    id: int = Field(pk=True)
-    name: str
-
-john = User({'id': 1, 'name': 'John', 'address': 'kirova 1'}, storage)
-assert john.dict() == {'id': 1, 'name': 'John', 'address': 'kirova 1'}
-```
 
 ## Связи между сущностями
 ```python
