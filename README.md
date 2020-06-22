@@ -2,7 +2,9 @@
 
 Библиотека для создания обьектных оберток над структурами данных и описания связей между ними
 
+
 [![build](https://github.com/angru/corm/workflows/build/badge.svg)](https://github.com/angru/corm/actions?query=workflow%3Abuild+branch%3Amaster++)
+[![codecov](https://codecov.io/gh/angru/corm/branch/master/graph/badge.svg)](https://codecov.io/gh/angru/corm)
 
 ## Help
 
