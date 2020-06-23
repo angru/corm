@@ -9,13 +9,17 @@ from corm import Storage, Entity
 class User(Entity):
     id: int
     name: str
+    description: str = 'cool guy'
 
 
 storage = Storage()
 john = User({'id': 1, 'name': 'John', 'address': 'kirova 1'}, storage)
 john.name = 'Not John'
 
-assert john.dict() == {'id': 1, 'name': 'Not John', 'address': 'kirova 1'}
+assert john.dict() == {
+    'id': 1, 'name': 'Not John',
+    'address': 'kirova 1', 'description': 'cool guy',
+}
 ```
 
 !!! Note
