@@ -32,6 +32,12 @@ def test_base_entity():
         'address': 'First st. 1',
     }
 
+    with pytest.raises(ValueError):
+        User(
+            data={'name': 'Bob'},
+            storage=storage,
+        )
+
 
 def test_origin_destination_setting():
     class Data(Entity):
@@ -57,6 +63,21 @@ def test_origin_destination_setting():
         '_attr2': 2,
         'attr3_': 3,
     }
+
+
+def test_default_values():
+    class Data(Entity):
+        in_place = 1
+        in_place_callable = list
+        in_field = Field(default=2)
+        in_field_cllable = Field(default=list)
+
+    data = Data(data={}, storage=Storage())
+
+    assert data.in_place == 1
+    assert data.in_place_callable == []
+    assert data.in_field == 2
+    assert data.in_field_cllable == []
 
 
 def test_same_pk():
