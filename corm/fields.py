@@ -20,15 +20,21 @@ class Field:
     pk: bool
     mode: int
     default: t.Callable[[], t.Any]
+    origin: t.Optional[str]
+    destination: t.Optional[str]
 
     def __init__(
         self,
         pk: bool = False,
         mode: AccessMode = AccessMode.ALL,
         default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
+        origin: t.Optional[str] = None,
+        destination: t.Optional[str] = None,
     ):
         self.pk = pk
         self.mode = mode
+        self.origin = origin
+        self.destination = destination
 
         if default is not ... and not callable(default):
             default = proxy_factory(default)
@@ -37,14 +43,14 @@ class Field:
 
     def __get__(self, instance: 'Entity', owner):
         if instance:
-            return instance._data.get(self.name)
+            return instance._data.get(self.origin)
         else:
             return self
 
     def __set__(self, instance: 'Entity', value):
         if instance:
             if self.mode & AccessMode.SET:
-                instance._data[self.name] = value
+                instance._data[self.origin] = value
             else:
                 raise ValueError(f'Field \'{self.name}\' is read only')
 
@@ -52,8 +58,14 @@ class Field:
         self.name = name
         self.owner = owner
 
+        if self.origin is None:
+            self.origin = name
+
+        if self.destination is None:
+            self.destination = self.origin
+
     def load(self, data: dict, instance: 'Entity') -> t.Any:
-        data = data.get(self.name, ...)
+        data = data.get(self.origin, ...)
 
         if data is ...:
             if self.default is not ...:
@@ -114,7 +126,7 @@ class Nested(Field):
         data = super().load(data, instance)
         storage = instance.storage
 
-        if data is not ...:
+        if data is not ... and data is not None:
             if self.many:
                 for item in data:
                     self._load_one(item, storage, instance)

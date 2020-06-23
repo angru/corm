@@ -4,30 +4,58 @@ from corm import Entity, Field, Storage, AccessMode
 
 
 def test_base_entity():
-    storage = Storage()
-
     class User(Entity):
         id: int
         name: str = Field(default='Bob')
+        description: str = 'some text'
 
+    storage = Storage()
     john = User(
         data={
             'id': 1,
             'name': 'John',
-            'description': 'john smith',
+            'address': 'First st. 1',
         },
         storage=storage,
     )
 
     assert john.id == 1
     assert john.name == 'John'
+    assert john.description == 'some text'
 
     john.name = 'Not John'
 
     assert john.dict(strip_none=True) == {
         'id': 1,
         'name': 'Not John',
-        'description': 'john smith',
+        'description': 'some text',
+        'address': 'First st. 1',
+    }
+
+
+def test_origin_destination_setting():
+    class Data(Entity):
+        attr1 = Field(origin='_attr1', destination='attr1_')
+        attr2 = Field(origin='_attr2')
+        attr3 = Field(destination='attr3_')
+
+    storage = Storage()
+    data = Data(
+        data={
+            '_attr1': 1,
+            '_attr2': 2,
+            'attr3': 3,
+        },
+        storage=storage,
+    )
+
+    assert data.attr1 == 1
+    assert data.attr2 == 2
+    assert data.attr3 == 3
+    assert data.dict() == {
+        'attr1_': 1,
+        '_attr2': 2,
+        'attr3_': 3,
     }
 
 

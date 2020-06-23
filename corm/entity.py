@@ -26,9 +26,8 @@ class EntityMeta(type):
 
                     if attr_value.pk:
                         pk_fields.append(attr_value)
-                elif not attr_name.startswith('_') \
-                        and attr_name in annotations:
-                    fields[attr_name] = Field()
+                elif not attr_name.startswith('_'):
+                    fields[attr_name] = Field(default=attr_value)
 
             for attr_name, type_ in annotations.items():
                 if not attr_name.startswith('_') and attr_name not in fields:
@@ -66,7 +65,7 @@ class Entity(metaclass=EntityMeta):
                 value = field.load(data, self)
 
                 if value is not ...:
-                    data[name] = value
+                    data[field.origin] = value
 
     def dict(self, strip_none=False, hooks: t.Optional[t.List['Hook']] = None):
         data = self._data
@@ -81,6 +80,8 @@ class Entity(metaclass=EntityMeta):
                 if isinstance(value, Entity):
                     value = value.dict(strip_none=strip_none)
 
-                data[name] = value
+                data.pop(field.origin, None)    # TODO: temporary solution
+
+                data[field.destination] = value
 
         return data
