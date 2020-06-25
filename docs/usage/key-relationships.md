@@ -21,22 +21,22 @@ assert holder.entity == entity
 
 ```python
 from corm import (
-    Storage, Field, Entity, NestedKey, KeyRelationship, RelationType,
+    Storage, Field, Entity, NestedKey, Relationship, RelationType,
 )
 
 class Entity(Entity):
     id: int = Field(pk=True)
     name: str
-    holder: 'EntityHolder' = KeyRelationship(
-        entity_type='EntityHolder', field_name='id',
-        relation_type=RelationType.CHILD,
+    holder: 'EntityHolder' = Relationship(
+        entity_type='EntityHolder',
+        relation_type=RelationType.RELATED,
     )
 
 class EntityHolder(Entity):
     name: str
     entity: Entity = NestedKey(
         related_entity_field=Entity.id, key='entity_id',
-        back_relation_type=RelationType.CHILD,
+        back_relation_type=RelationType.RELATED,
     )
 
 storage = Storage()

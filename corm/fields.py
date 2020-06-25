@@ -188,7 +188,7 @@ class NestedKey(Field):
                 f'\'{related_entity_field}\' is not primary key field',
             )
 
-        super().__init__(mode=mode)
+        super().__init__(mode=mode, origin=key)
 
         self.related_entity_field = related_entity_field
         self.key = key
@@ -206,7 +206,7 @@ class NestedKey(Field):
 
     def load(self, data: dict, instance: 'Entity') -> t.Any:
         storage = instance.storage
-        data = data.get(self.key, ...)
+        data = super().load(data, instance)
 
         if data is not ...:
             if self.many:
@@ -243,59 +243,3 @@ class NestedKey(Field):
                 return result
             else:
                 return instance.storage.get(self.related_entity_field, data)
-
-
-class KeyRelationship(Field):
-    def __init__(
-        self,
-        entity_type: t.Union[str, t.Type['Entity']],
-        field_name: str,
-        relation_type: RelationType,
-        many: bool = False,
-        mode: AccessMode = AccessMode.GET,
-    ):
-        super().__init__(mode=mode)
-
-        self._entity_type = entity_type
-        self.field_name = field_name
-        self.relation_type = relation_type
-        self.many = many
-
-    @property
-    def entity_type(self) -> t.Type['Entity']:
-        if isinstance(self._entity_type, str):
-            self._entity_type = registry.get(self._entity_type)
-
-        return self._entity_type
-
-    def __get__(self, instance: 'Entity', owner: t.Type['Entity']):
-        if not instance:
-            return super().__get__(instance, owner)
-
-        field = instance.__fields__[self.field_name]
-        key = getattr(instance, self.field_name, None)
-
-        if self.many:
-            return instance.storage.get_key_relations(
-                field_from=field,
-                key_from=key,
-                relation_type=self.relation_type,
-                to=self.entity_type,
-            )
-        else:
-            return instance.storage.get_one_key_related_entity(
-                field_from=field,
-                key_from=key,
-                relation_type=self.relation_type,
-                to=self.entity_type,
-            )
-
-
-# class EntityRef:
-#     def __init__(self, key: t.Any, field: Field, storage: 'Storage'):
-#         self.key = key
-#         self.field = field
-#         self.storage = storage
-#
-#     def get(self):
-#         return self.storage.get(self.field, self.key)

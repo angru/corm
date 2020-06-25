@@ -4,7 +4,6 @@ from corm.fields import (
     Nested,
     Relationship,
     NestedKey,
-    KeyRelationship,
 )
 from corm.storage import Storage, Query
 from corm.constants import RelationType, AccessMode
@@ -16,7 +15,6 @@ __all__ = (
     'Nested',
     'Relationship',
     'NestedKey',
-    'KeyRelationship',
     'Storage',
     'Query',
     'RelationType',
