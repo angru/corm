@@ -1,7 +1,7 @@
 import typing as t
 
 from corm import registry, constants
-from corm.fields import Field
+from corm.fields import Field, Nested
 
 if t.TYPE_CHECKING:
     from corm.storage import Storage
@@ -77,8 +77,13 @@ class Entity(metaclass=EntityMeta):
                 if strip_none and value is None:
                     continue
 
-                if isinstance(value, Entity):
-                    value = value.dict(strip_none=strip_none)
+                if isinstance(field, Nested):
+                    if field.many:
+                        value = [
+                            item.dict(strip_none=strip_none) for item in value
+                        ]
+                    else:
+                        value = value.dict(strip_none=strip_none)
 
                 data.pop(field.origin, None)    # TODO: temporary solution
 

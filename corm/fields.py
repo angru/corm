@@ -15,6 +15,14 @@ def proxy_factory(value: t.Any) -> t.Callable[[], t.Any]:
     return proxy
 
 
+class KeyGetter:
+    def __init__(self, key):
+        self.key = key
+
+    def get(self, data: dict):
+        return data.get(self.key, None)
+
+
 class Field:
     name: str
     pk: bool
@@ -86,17 +94,22 @@ class Nested(Field):
         self,
         entity_type: t.Union[str, t.Type['Entity']],
         many: bool = False,
-        relation_type: RelationType = RelationType.PARENT,
-        back_relation_type: t.Optional[RelationType] = None,
+        back_relation: t.Optional[RelationType] = None,
         mode: AccessMode = AccessMode.ALL,
         default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
+        origin: str = None,
+        destination: str = None,
     ):
-        super().__init__(mode=mode, default=default)
+        super().__init__(
+            mode=mode,
+            default=default,
+            origin=origin,
+            destination=destination,
+        )
 
         self._entity_type = entity_type
         self.many = many
-        self.relation_type = relation_type
-        self.back_relation_type = back_relation_type
+        self.back_relation = back_relation
 
     @property
     def entity_type(self) -> t.Type['Entity']:
@@ -108,19 +121,14 @@ class Nested(Field):
     def _load_one(self, data: t.Any, storage: 'Storage', parent: 'Entity'):
         entity = self.entity_type(data=data, storage=storage)
 
-        if self.relation_type:
-            storage.make_relation(
-                from_=parent,
-                to_=entity,
-                relation_type=self.relation_type,
-            )
-
-        if self.back_relation_type:
+        if self.back_relation:
             storage.make_relation(
                 from_=entity,
                 to_=parent,
-                relation_type=self.back_relation_type,
+                relation_type=self.back_relation,
             )
+
+        return entity
 
     def load(self, data, instance: 'Entity') -> t.NoReturn:
         data = super().load(data, instance)
@@ -128,12 +136,77 @@ class Nested(Field):
 
         if data is not ... and data is not None:
             if self.many:
-                for item in data:
-                    self._load_one(item, storage, instance)
+                data = [
+                    self._load_one(item, storage, instance) for item in data
+                ]
             else:
-                self._load_one(data, storage, instance)
+                data = self._load_one(data, storage, instance)
 
         return data
+
+    def __set__(
+        self,
+        instance: 'Entity',
+        value: t.Union[t.List['Entity'], 'Entity'],
+    ):
+        if not instance:
+            return super().__set__(instance, value)
+
+        if self.back_relation:
+            old_value = getattr(instance, self.origin)
+
+            if old_value:
+                if self.many:
+                    for related_entity in old_value:
+                        instance.storage.remove_relation(
+                            from_=related_entity,
+                            to_=instance,
+                            relation_type=self.back_relation,
+                        )
+                else:
+                    instance.storage.remove_relation(
+                        from_=old_value,
+                        to_=instance,
+                        relation_type=self.back_relation,
+                    )
+
+            if value:
+                if self.many:
+                    for entity in value:
+                        instance.storage.make_relation(
+                            from_=entity,
+                            to_=instance,
+                            relation_type=self.back_relation,
+                        )
+                else:
+                    instance.storage.make_relation(
+                        from_=value,
+                        to_=instance,
+                        relation_type=self.back_relation,
+                    )
+
+        super().__set__(instance, value)
+
+
+class Relationship(Field):
+    def __init__(
+        self,
+        entity_type: t.Union[str, t.Type['Entity']],
+        relation_type: RelationType,
+        many: bool = False,
+    ):
+        super().__init__(mode=AccessMode.GET)
+
+        self._entity_type = entity_type
+        self.relation_type = relation_type
+        self.many = many
+
+    @property
+    def entity_type(self) -> t.Type['Entity']:
+        if isinstance(self._entity_type, str):
+            self._entity_type = registry.get(self._entity_type)
+
+        return self._entity_type
 
     def __get__(self, instance: 'Entity', owner):
         if not instance:
@@ -152,46 +225,28 @@ class Nested(Field):
                 self.relation_type,
             )
 
-    def __set__(self, instance, value):
-        raise NotImplementedError
-
-
-class Relationship(Nested):
-    def __init__(
-        self,
-        entity_type: t.Union[str, t.Type['Entity']],
-        relation_type: RelationType,
-        many: bool = False,
-        mode: AccessMode = AccessMode.GET,
-        default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
-    ):
-        super().__init__(
-            entity_type=entity_type,
-            relation_type=relation_type,
-            many=many,
-            mode=mode,
-            default=default,
-        )
-
 
 class NestedKey(Field):
     def __init__(
         self,
         related_entity_field: t.Union['Field', t.Any],
-        key: str,
+        key: t.Union[KeyGetter, str],
         back_relation_type: t.Optional[RelationType] = None,
         many: bool = False,
         mode: AccessMode = AccessMode.GET_LOAD,
+        default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
     ):
         if not related_entity_field.pk:
             raise ValueError(
                 f'\'{related_entity_field}\' is not primary key field',
             )
 
-        super().__init__(mode=mode, origin=key)
+        getter = KeyGetter(key) if not isinstance(key, KeyGetter) else key
+
+        super().__init__(mode=mode, origin=getter.key, default=default)
 
         self.related_entity_field = related_entity_field
-        self.key = key
+        self.getter = getter
         self.many = many
         self.back_relation_type = back_relation_type
 
@@ -208,7 +263,7 @@ class NestedKey(Field):
         storage = instance.storage
         data = super().load(data, instance)
 
-        if data is not ...:
+        if data is not ... and data is not None:
             if self.many:
                 for item in data:
                     self._load_one(item, storage, instance)
@@ -221,7 +276,7 @@ class NestedKey(Field):
         if not instance:
             return super().__get__(instance, owner)
 
-        data = instance._data.get(self.key)
+        data = self.getter.get(instance._data)
 
         if data is not None:
             if self.many:

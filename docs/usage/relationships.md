@@ -71,7 +71,7 @@ class Address(Entity):
 class User(Entity):
     name: str
     address: Address = Nested(
-        entity_type=Address, back_relation_type=RelationType.CHILD,
+        entity_type=Address, back_relation=RelationType.CHILD,
     )
 
 
@@ -92,7 +92,7 @@ from corm import Storage, Entity, Relationship, Nested, RelationType
 class Item(Entity):
     id: int
     items: t.List['Item'] = Nested(
-        entity_type='Item', many=True, back_relation_type=RelationType.CHILD,
+        entity_type='Item', many=True, back_relation=RelationType.CHILD,
     )
     parent: 'Item' = Relationship(
         entity_type='Item', relation_type=RelationType.CHILD,

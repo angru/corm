@@ -89,6 +89,22 @@ class Storage:
         if entities:
             return entities[0]
 
+    def remove_relation(
+        self,
+        from_: t.Union['Entity', 'EntityRef'],
+        to_: t.Union['Entity', 'EntityRef'],
+        relation_type: constants.RelationType,
+    ) -> t.NoReturn:
+        self._relations[from_][type(to_), relation_type].remove(to_)
+
+    def remove_relations(
+        self,
+        entity: t.Union['Entity', 'EntityRef'],
+        related_entity_type: t.Type['Entity'],
+        relation_type: constants.RelationType,
+    ) -> t.NoReturn:
+        self._relations[entity][related_entity_type, relation_type].clear()
+
     def merge(self, entity: 'Entity'):
         raise NotImplementedError
 

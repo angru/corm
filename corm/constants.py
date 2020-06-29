@@ -11,6 +11,7 @@ class AccessMode(int, enum.Enum):
     GET_DUMP = GET | DUMP
     SET_LOAD = SET | LOAD
     GET_LOAD_DUMP = GET | LOAD | DUMP
+    SET_LOAD_DUMP = SET | LOAD | DUMP
 
     ALL = GET | SET | LOAD | DUMP
 
