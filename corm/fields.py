@@ -23,6 +23,75 @@ class KeyGetter:
         return data.get(self.key, None)
 
 
+class RelationshipList(list):
+    def __init__(
+        self,
+        entity: 'Entity',
+        items: t.Iterable['Entity'],
+        relation_type: RelationType = None,
+    ):
+        super().__init__(items)
+
+        self.entity = entity
+        self.relation_type = relation_type
+
+        if relation_type:
+            for item in self:
+                entity.storage.make_relation(
+                    from_=item,
+                    to_=entity,
+                    relation_type=relation_type,
+                )
+
+    def append(self, entity: 'Entity') -> None:
+        super().append(entity)
+
+        if self.relation_type:
+            self.entity.storage.make_relation(
+                from_=entity,
+                to_=self.entity,
+                relation_type=self.relation_type,
+            )
+
+    def extend(self, entities: t.List['Entity']) -> None:
+        for entity in entities:
+            super().append(entity)
+
+            if self.relation_type:
+                self.entity.storage.make_relation(
+                    from_=entity,
+                    to_=self.entity,
+                    relation_type=self.relation_type,
+                )
+
+    def remove(self, entity: 'Entity') -> None:
+        super().remove(entity)
+
+        if self.relation_type:
+            self.entity.storage.remove_relation(
+                from_=entity,
+                to_=self.entity,
+                relation_type=self.relation_type,
+            )
+
+    def insert(self, index: int, entity: 'Entity') -> None:
+        raise NotImplementedError
+
+    def pop(self, index: int = ...) -> 'Entity':
+        raise NotImplementedError
+
+    def clear(self) -> None:
+        if self.relation_type:
+            for entity in self:
+                self.entity.storage.remove_relation(
+                    from_=entity,
+                    to_=self.entity,
+                    relation_type=self.relation_type,
+                )
+
+        super().clear()
+
+
 class Field:
     name: str
     pk: bool
@@ -121,13 +190,6 @@ class Nested(Field):
     def _load_one(self, data: t.Any, storage: 'Storage', parent: 'Entity'):
         entity = self.entity_type(data=data, storage=storage)
 
-        if self.back_relation:
-            storage.make_relation(
-                from_=entity,
-                to_=parent,
-                relation_type=self.back_relation,
-            )
-
         return entity
 
     def load(self, data, instance: 'Entity') -> t.NoReturn:
@@ -136,11 +198,25 @@ class Nested(Field):
 
         if data is not ... and data is not None:
             if self.many:
-                data = [
-                    self._load_one(item, storage, instance) for item in data
-                ]
+                items = (
+                    self.entity_type(data=item, storage=storage)
+                    for item in data
+                )
+                data = RelationshipList(
+                    entity=instance,
+                    items=items,
+                    relation_type=self.back_relation,
+                )
+
             else:
-                data = self._load_one(data, storage, instance)
+                data = self.entity_type(data=data, storage=storage)
+
+                if self.back_relation:
+                    storage.make_relation(
+                        from_=data,
+                        to_=instance,
+                        relation_type=self.back_relation,
+                    )
 
         return data
 
@@ -152,38 +228,35 @@ class Nested(Field):
         if not instance:
             return super().__set__(instance, value)
 
-        if self.back_relation:
-            old_value = getattr(instance, self.origin)
+        old_value = getattr(instance, self.origin)
 
-            if old_value:
-                if self.many:
-                    for related_entity in old_value:
-                        instance.storage.remove_relation(
-                            from_=related_entity,
-                            to_=instance,
-                            relation_type=self.back_relation,
-                        )
-                else:
-                    instance.storage.remove_relation(
-                        from_=old_value,
-                        to_=instance,
-                        relation_type=self.back_relation,
-                    )
+        if self.many:
+            if not isinstance(value, list):
+                raise ValueError(
+                    f'Only list accepted for nested field with many set to True, got: {value}',
+                )
+
+            old_value.clear()
+
+            value = RelationshipList(
+                entity=instance,
+                items=value,
+                relation_type=self.back_relation,
+            )
+        else:
+            if self.back_relation:
+                instance.storage.remove_relation(
+                    from_=old_value,
+                    to_=instance,
+                    relation_type=self.back_relation,
+                )
 
             if value:
-                if self.many:
-                    for entity in value:
-                        instance.storage.make_relation(
-                            from_=entity,
-                            to_=instance,
-                            relation_type=self.back_relation,
-                        )
-                else:
-                    instance.storage.make_relation(
-                        from_=value,
-                        to_=instance,
-                        relation_type=self.back_relation,
-                    )
+                instance.storage.make_relation(
+                    from_=value,
+                    to_=instance,
+                    relation_type=self.back_relation,
+                )
 
         super().__set__(instance, value)
 
