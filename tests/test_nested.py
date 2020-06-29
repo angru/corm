@@ -1,5 +1,7 @@
 import typing as t
 
+import pytest
+
 from corm import Storage, Entity, Field, Nested, RelationType, Relationship
 
 
@@ -218,10 +220,10 @@ def test_set_value_many_with_back_relationship():
             'description': 'john smith',
             'addresses': [
                 {
-                    'street': 'kirova1',
+                    'street': 'kirova 1',
                 },
                 {
-                    'street': 'kirova2',
+                    'street': 'kirova 2',
                 },
             ],
         },
@@ -251,3 +253,77 @@ def test_set_value_many_with_back_relationship():
             },
         ],
     }
+
+
+def test_change_back_relationship_when_many():
+    class Address(Entity):
+        street: str
+        user: 'User' = Relationship(
+            entity_type='User',
+            relation_type=RelationType.RELATED,
+        )
+
+    class User(Entity):
+        id: int
+        addresses: t.List[Address] = Nested(
+            entity_type=Address,
+            back_relation=RelationType.RELATED,
+            many=True,
+        )
+
+    storage = Storage()
+    john = User(
+        data={
+            'id': 1,
+            'name': 'John',
+            'description': 'john smith',
+            'addresses': [
+                {
+                    'street': 'kirova 1',
+                },
+                {
+                    'street': 'kirova 2',
+                },
+            ],
+        },
+        storage=storage,
+    )
+
+    old_address1, old_address2 = john.addresses
+
+    john.addresses.remove(old_address1)
+
+    assert old_address1.user is None
+    assert old_address2.user is john
+
+    john.addresses.clear()
+
+    assert old_address1.user is None
+    assert old_address2.user is None
+
+    address1 = Address(data={'street': 'lenina 1'}, storage=storage)
+    address2 = Address(data={'street': 'lenina 2'}, storage=storage)
+
+    john.addresses.append(address1)
+
+    assert address1.user is john
+
+    john.addresses.extend([address2])
+
+    assert address2.user is john
+    assert john.dict() == {
+        'id': 1,
+        'name': 'John',
+        'description': 'john smith',
+        'addresses': [
+            {
+                'street': 'lenina 1',
+            },
+            {
+                'street': 'lenina 2',
+            },
+        ],
+    }
+
+    with pytest.raises(ValueError):
+        john.addresses = None
