@@ -2,7 +2,7 @@ import typing as t
 
 import pytest
 
-from corm import Entity, Field, NestedKey, Storage, Relationship, RelationType
+from corm import Entity, Field, KeyNested, Storage, Relationship, RelationType, KeyManager
 
 
 def test_nested_key():
@@ -11,9 +11,9 @@ def test_nested_key():
         name: str
 
     class EntityHolder(Entity):
-        entity: SomeEntity = NestedKey(
+        entity: SomeEntity = KeyNested(
             related_entity_field=SomeEntity.id,
-            key='entity_id',
+            origin='entity_id',
         )
 
     storage = Storage()
@@ -24,9 +24,9 @@ def test_nested_key():
     assert holder.dict() == {'entity_id': 123}
 
     class ManyEntityHolder(Entity):
-        entities: t.List[SomeEntity] = NestedKey(
+        entities: t.List[SomeEntity] = KeyNested(
             related_entity_field=SomeEntity.id,
-            key='entity_ids',
+            origin='entity_ids',
             many=True,
         )
 
@@ -57,11 +57,11 @@ def test_make_back_relationship():
         )
 
     class EntityHolder(Entity):
-        entities: t.List[SomeEntity] = NestedKey(
+        entities: t.List[SomeEntity] = KeyNested(
             related_entity_field=SomeEntity.id,
-            key='entity_ids',
+            origin='entity_ids',
             many=True,
-            back_relation_type=RelationType.RELATED,
+            back_relation=RelationType.RELATED,
         )
 
     storage = Storage()
@@ -82,3 +82,41 @@ def test_make_back_relationship():
     assert holder.dict({'entity_ids': [123, 456]})
     assert entity.dict() == {'id': 123, 'name': 'entity'}
     assert delayed_entity.dict() == {'id': 456, 'name': 'delayed entity'}
+
+
+def test_complex_key():
+    class EntityKeyManager(KeyManager):
+        def get(self, data):
+            return [item['id'] for item in data]
+
+    class SomeEntity(Entity):
+        id: int = Field(pk=True)
+        name: str
+
+    class ManyEntityHolder(Entity):
+        entities: t.List[SomeEntity] = KeyNested(
+            related_entity_field=SomeEntity.id,
+            origin='entity_ids',
+            many=True,
+            key_manager=EntityKeyManager(),
+        )
+
+    storage = Storage()
+    entity1 = SomeEntity({'id': 123, 'name': 'entity1'}, storage=storage)
+    entity2 = SomeEntity({'id': 321, 'name': 'entity2'}, storage=storage)
+    holder = ManyEntityHolder(
+        {
+            'entity_ids': [
+                {
+                    'id': 123,
+                },
+                {
+                    'id': 321,
+                },
+            ],
+        },
+        storage=storage,
+    )
+
+    assert holder.entities == [entity1, entity2]
+    assert holder.dict() == {'entity_ids': [{'id': 123}, {'id': 321}]}

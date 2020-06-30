@@ -3,8 +3,8 @@ from corm.fields import (
     Field,
     Nested,
     Relationship,
-    NestedKey,
-    KeyGetter,
+    KeyNested,
+    KeyManager,
 )
 from corm.storage import Storage, Query
 from corm.constants import RelationType, AccessMode
@@ -15,8 +15,8 @@ __all__ = (
     'Field',
     'Nested',
     'Relationship',
-    'NestedKey',
-    'KeyGetter',
+    'KeyNested',
+    'KeyManager',
     'Storage',
     'Query',
     'RelationType',

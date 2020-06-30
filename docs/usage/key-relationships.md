@@ -1,6 +1,6 @@
 ## Simple case
 ```python
-from corm import Storage, Entity, NestedKey, Field
+from corm import Storage, Entity, KeyNested, Field
 
 class Entity(Entity):
     id: int = Field(pk=True)
@@ -8,7 +8,7 @@ class Entity(Entity):
 
 class EntityHolder(Entity):
     name: str
-    entity: Entity = NestedKey(Entity.id, 'entity_id')
+    entity: Entity = KeyNested(Entity.id, 'entity_id')
 
 storage = Storage()
 entity = Entity({'id': 123, 'name': 'entity'}, storage=storage)
@@ -21,7 +21,7 @@ assert holder.entity == entity
 
 ```python
 from corm import (
-    Storage, Field, Entity, NestedKey, Relationship, RelationType,
+    Storage, Field, Entity, KeyNested, Relationship, RelationType,
 )
 
 class Entity(Entity):
@@ -34,9 +34,9 @@ class Entity(Entity):
 
 class EntityHolder(Entity):
     name: str
-    entity: Entity = NestedKey(
+    entity: Entity = KeyNested(
         related_entity_field=Entity.id, key='entity_id',
-        back_relation_type=RelationType.RELATED,
+        back_relation=RelationType.RELATED,
     )
 
 storage = Storage()

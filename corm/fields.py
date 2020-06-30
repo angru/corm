@@ -15,12 +15,12 @@ def proxy_factory(value: t.Any) -> t.Callable[[], t.Any]:
     return proxy
 
 
-class KeyGetter:
-    def __init__(self, key):
-        self.key = key
+class KeyManager:
+    def get(self, data):
+        return data
 
-    def get(self, data: dict):
-        return data.get(self.key, None)
+    def set(self, data, value) -> t.NoReturn:
+        pass
 
 
 class RelationshipList(list):
@@ -196,27 +196,25 @@ class Nested(Field):
         data = super().load(data, instance)
         storage = instance.storage
 
-        if data is not ... and data is not None:
-            if self.many:
-                items = (
-                    self.entity_type(data=item, storage=storage)
-                    for item in data
-                )
-                data = RelationshipList(
-                    entity=instance,
-                    items=items,
+        if self.many:
+            items = (
+                self.entity_type(data=item, storage=storage) for item in data
+            )
+            data = RelationshipList(
+                entity=instance,
+                items=items,
+                relation_type=self.back_relation,
+            )
+
+        else:
+            data = self.entity_type(data=data, storage=storage)
+
+            if self.back_relation:
+                storage.make_relation(
+                    from_=data,
+                    to_=instance,
                     relation_type=self.back_relation,
                 )
-
-            else:
-                data = self.entity_type(data=data, storage=storage)
-
-                if self.back_relation:
-                    storage.make_relation(
-                        from_=data,
-                        to_=instance,
-                        relation_type=self.back_relation,
-                    )
 
         return data
 
@@ -299,62 +297,71 @@ class Relationship(Field):
             )
 
 
-class NestedKey(Field):
+class KeyNested(Field):
     def __init__(
         self,
         related_entity_field: t.Union['Field', t.Any],
-        key: t.Union[KeyGetter, str],
-        back_relation_type: t.Optional[RelationType] = None,
+        back_relation: t.Optional[RelationType] = None,
         many: bool = False,
         mode: AccessMode = AccessMode.GET_LOAD,
         default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
+        origin: t.Optional[str] = None,
+        destination: t.Optional[str] = None,
+        key_manager: t.Optional[KeyManager] = None,
     ):
         if not related_entity_field.pk:
             raise ValueError(
                 f'\'{related_entity_field}\' is not primary key field',
             )
 
-        getter = KeyGetter(key) if not isinstance(key, KeyGetter) else key
-
-        super().__init__(mode=mode, origin=getter.key, default=default)
+        super().__init__(
+            mode=mode,
+            origin=origin,
+            destination=destination,
+            default=default,
+        )
 
         self.related_entity_field = related_entity_field
-        self.getter = getter
+        self.key_manager = key_manager or KeyManager()
         self.many = many
-        self.back_relation_type = back_relation_type
+        self.back_relation = back_relation
 
     def _load_one(self, data: t.Any, storage: 'Storage', parent: 'Entity'):
-        if self.back_relation_type:
+        if self.back_relation:
             storage.make_key_relation(
                 field_from=self.related_entity_field,
                 key_from=data,
-                relation_type=self.back_relation_type,
+                relation_type=self.back_relation,
                 to=parent,
             )
 
     def load(self, data: dict, instance: 'Entity') -> t.Any:
         storage = instance.storage
         data = super().load(data, instance)
+        key = self.key_manager.get(data)
 
-        if data is not ... and data is not None:
+        if data is not None:
             if self.many:
-                for item in data:
+                for item in key:
                     self._load_one(item, storage, instance)
             else:
-                self._load_one(data, storage, instance)
+                self._load_one(key, storage, instance)
 
         return data
 
     def __get__(self, instance: 'Entity', owner):
+        data = super().__get__(instance, owner)
+
         if not instance:
-            return super().__get__(instance, owner)
+            return data
 
-        data = self.getter.get(instance._data)
+        key = self.key_manager.get(data)
 
-        if data is not None:
+        if key is not None:
             if self.many:
                 result = []
-                for item in data:
+
+                for item in key:
                     entity = instance.storage.get(
                         self.related_entity_field,
                         item,
@@ -370,4 +377,12 @@ class NestedKey(Field):
 
                 return result
             else:
-                return instance.storage.get(self.related_entity_field, data)
+                entity = instance.storage.get(self.related_entity_field, key)
+
+                if not entity:
+                    raise ValueError(
+                        f'Can\'t find {self.related_entity_field}={key} '
+                        f'in storage',
+                    )
+
+                return entity
