@@ -11,7 +11,7 @@
       
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.3.2">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.4.0">
     
     
       
@@ -253,6 +253,20 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#fields" class="md-nav__link">
+    Fields
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-values" class="md-nav__link">
+    Default values
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -367,6 +381,20 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#fields" class="md-nav__link">
+    Fields
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-values" class="md-nav__link">
+    Default values
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -397,13 +425,17 @@
 <span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
     <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;cool guy&#39;</span>
 
 
 <span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
 <span class="n">john</span> <span class="o">=</span> <span class="n">User</span><span class="p">({</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;John&#39;</span><span class="p">,</span> <span class="s1">&#39;address&#39;</span><span class="p">:</span> <span class="s1">&#39;kirova 1&#39;</span><span class="p">},</span> <span class="n">storage</span><span class="p">)</span>
 <span class="n">john</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Not John&#39;</span>
 
-<span class="k">assert</span> <span class="n">john</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Not John&#39;</span><span class="p">,</span> <span class="s1">&#39;address&#39;</span><span class="p">:</span> <span class="s1">&#39;kirova 1&#39;</span><span class="p">}</span>
+<span class="k">assert</span> <span class="n">john</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span>
+    <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Not John&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;address&#39;</span><span class="p">:</span> <span class="s1">&#39;kirova 1&#39;</span><span class="p">,</span> <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="s1">&#39;cool guy&#39;</span><span class="p">,</span>
+<span class="p">}</span>
 </code></pre></div>
 
 
@@ -411,6 +443,62 @@
 <p class="admonition-title">Note</p>
 <p>You don't need to describe full data structure, only fields you need, rest corm leave as is. In example above <code>address</code> key</p>
 </div>
+<h2 id="fields">Fields</h2>
+<p>To set additional settings for any entity fields there is <code>Field</code> class</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Field</span>
+
+
+<span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">origin</span><span class="o">=</span><span class="s1">&#39;user_id&#39;</span><span class="p">)</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;user&#39;</span><span class="p">)</span>
+
+
+<span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+<span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;user_id&#39;</span><span class="p">:</span> <span class="mi">33</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;John&#39;</span><span class="p">},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">)</span>
+
+<span class="k">assert</span> <span class="n">user</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="mi">33</span>
+<span class="k">assert</span> <span class="n">user</span><span class="o">.</span><span class="n">description</span> <span class="o">==</span> <span class="s1">&#39;user&#39;</span>
+<span class="k">assert</span> <span class="n">user</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;user_id&#39;</span><span class="p">:</span> <span class="mi">33</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;John&#39;</span><span class="p">,</span> <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="s1">&#39;user&#39;</span><span class="p">}</span>
+</code></pre></div>
+
+
+<h2 id="default-values">Default values</h2>
+<p>There are two ways to set default value, just set as class value or through <code>default</code> param of <code>Field</code>, <code>Nested</code> or <code>KeyNested</code></p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Field</span>
+
+
+<span class="k">class</span> <span class="nc">Foo</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="n">inplace</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">in_field</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">in_field_callable</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+
+
+<span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+<span class="n">foo</span> <span class="o">=</span> <span class="n">Foo</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">{},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">)</span>
+
+<span class="k">assert</span> <span class="n">foo</span><span class="o">.</span><span class="n">inplace</span> <span class="o">==</span> <span class="mi">1</span>
+<span class="k">assert</span> <span class="n">foo</span><span class="o">.</span><span class="n">in_field</span> <span class="o">==</span> <span class="mi">2</span>
+<span class="k">assert</span> <span class="n">foo</span><span class="o">.</span><span class="n">in_field_callable</span> <span class="o">==</span> <span class="p">[]</span>
+</code></pre></div>
+
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>default</code> also can be callable, corm call it each time when creating entity instance if value of field is not provided. But you can use it only with <code>Field</code>, <code>Nested</code> or <code>KeyNested</code>, inplace is not allowed</p>
+</div>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Entity</span>
+
+
+<span class="k">class</span> <span class="nc">Foo</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="n">inplace</span> <span class="o">=</span> <span class="nb">list</span>
+
+
+<span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+<span class="n">foo</span> <span class="o">=</span> <span class="n">Foo</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">{},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">)</span>
+
+<span class="k">assert</span> <span class="n">foo</span><span class="o">.</span><span class="n">inplace</span> <span class="o">==</span> <span class="nb">list</span>    <span class="c1"># still callable, not new empty list</span>
+</code></pre></div>
                 
               
               
@@ -478,14 +566,14 @@
     </div>
     
       <script src="../../assets/javascripts/vendor.d710d30a.min.js"></script>
-      <script src="../../assets/javascripts/bundle.7f4f3c92.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      <script src="../../assets/javascripts/bundle.b39636ac.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
       
       <script>
         app = initialize({
           base: "../..",
           features: [],
           search: Object.assign({
-            worker: "../../assets/javascripts/worker/search.9b3611bd.min.js"
+            worker: "../../assets/javascripts/worker/search.a68abb33.min.js"
           }, typeof search !== "undefined" && search)
         })
       </script>

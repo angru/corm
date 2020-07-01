@@ -11,7 +11,7 @@
       
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.3.2">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.4.0">
     
     
       
@@ -284,6 +284,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#change-relationships-between-entities" class="md-nav__link">
+    Change relationships between entities
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -381,6 +388,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#change-relationships-between-entities" class="md-nav__link">
+    Change relationships between entities
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -404,18 +418,24 @@
                   <h1>Key relationships</h1>
                 
                 <h2 id="simple-case">Simple case</h2>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">NestedKey</span><span class="p">,</span> <span class="n">Field</span>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">KeyNested</span><span class="p">,</span> <span class="n">Field</span>
 
-<span class="k">class</span> <span class="nc">Entity</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+
+<span class="k">class</span> <span class="nc">SomeEntity</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
     <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
 
+
 <span class="k">class</span> <span class="nc">EntityHolder</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="n">entity</span><span class="p">:</span> <span class="n">Entity</span> <span class="o">=</span> <span class="n">NestedKey</span><span class="p">(</span><span class="n">Entity</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s1">&#39;entity_id&#39;</span><span class="p">)</span>
+    <span class="n">entity</span><span class="p">:</span> <span class="n">SomeEntity</span> <span class="o">=</span> <span class="n">KeyNested</span><span class="p">(</span>
+        <span class="n">related_entity_field</span><span class="o">=</span><span class="n">SomeEntity</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+        <span class="n">origin</span><span class="o">=</span><span class="s1">&#39;entity_id&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
 
 <span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
-<span class="n">entity</span> <span class="o">=</span> <span class="n">Entity</span><span class="p">({</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">123</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;entity&#39;</span><span class="p">},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">)</span>
+<span class="n">entity</span> <span class="o">=</span> <span class="n">SomeEntity</span><span class="p">({</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">123</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;entity&#39;</span><span class="p">},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">)</span>
 <span class="n">holder</span> <span class="o">=</span> <span class="n">EntityHolder</span><span class="p">({</span><span class="s1">&#39;entity_id&#39;</span><span class="p">:</span> <span class="mi">123</span><span class="p">},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">)</span>
 
 <span class="k">assert</span> <span class="n">holder</span><span class="o">.</span><span class="n">entity</span> <span class="o">==</span> <span class="n">entity</span>
@@ -424,30 +444,71 @@
 
 <h2 id="bidirectional-key-relationships">Bidirectional key relationships</h2>
 <div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">Storage</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">NestedKey</span><span class="p">,</span> <span class="n">KeyRelationship</span><span class="p">,</span> <span class="n">RelationType</span><span class="p">,</span>
+    <span class="n">Storage</span><span class="p">,</span>
+    <span class="n">Field</span><span class="p">,</span>
+    <span class="n">Entity</span><span class="p">,</span>
+    <span class="n">KeyNested</span><span class="p">,</span>
+    <span class="n">Relationship</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="k">class</span> <span class="nc">Entity</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+
+<span class="k">class</span> <span class="nc">SomeEntity</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
     <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="n">holder</span><span class="p">:</span> <span class="s1">&#39;EntityHolder&#39;</span> <span class="o">=</span> <span class="n">KeyRelationship</span><span class="p">(</span>
-        <span class="n">entity_type</span><span class="o">=</span><span class="s1">&#39;EntityHolder&#39;</span><span class="p">,</span> <span class="n">field_name</span><span class="o">=</span><span class="s1">&#39;id&#39;</span><span class="p">,</span>
-        <span class="n">relation_type</span><span class="o">=</span><span class="n">RelationType</span><span class="o">.</span><span class="n">CHILD</span><span class="p">,</span>
-    <span class="p">)</span>
+    <span class="n">holder</span><span class="p">:</span> <span class="s1">&#39;EntityHolder&#39;</span> <span class="o">=</span> <span class="n">Relationship</span><span class="p">(</span><span class="n">entity_type</span><span class="o">=</span><span class="s1">&#39;EntityHolder&#39;</span><span class="p">)</span>
+
 
 <span class="k">class</span> <span class="nc">EntityHolder</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="n">entity</span><span class="p">:</span> <span class="n">Entity</span> <span class="o">=</span> <span class="n">NestedKey</span><span class="p">(</span>
-        <span class="n">related_entity_field</span><span class="o">=</span><span class="n">Entity</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="s1">&#39;entity_id&#39;</span><span class="p">,</span>
-        <span class="n">back_relation_type</span><span class="o">=</span><span class="n">RelationType</span><span class="o">.</span><span class="n">CHILD</span><span class="p">,</span>
+    <span class="n">entity</span><span class="p">:</span> <span class="n">SomeEntity</span> <span class="o">=</span> <span class="n">KeyNested</span><span class="p">(</span>
+        <span class="n">related_entity_field</span><span class="o">=</span><span class="n">SomeEntity</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+        <span class="n">origin</span><span class="o">=</span><span class="s1">&#39;entity_id&#39;</span><span class="p">,</span>
+        <span class="n">back_relation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span>
 
+
 <span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
-<span class="n">entity</span> <span class="o">=</span> <span class="n">Entity</span><span class="p">({</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">123</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;entity&#39;</span><span class="p">},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">)</span>
+<span class="n">entity</span> <span class="o">=</span> <span class="n">SomeEntity</span><span class="p">({</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">123</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;entity&#39;</span><span class="p">},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">)</span>
 <span class="n">holder</span> <span class="o">=</span> <span class="n">EntityHolder</span><span class="p">({</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;holder&#39;</span><span class="p">,</span> <span class="s1">&#39;entity_id&#39;</span><span class="p">:</span> <span class="mi">123</span><span class="p">},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">)</span>
 
 <span class="k">assert</span> <span class="n">holder</span><span class="o">.</span><span class="n">entity</span> <span class="o">==</span> <span class="n">entity</span>
 <span class="k">assert</span> <span class="n">entity</span><span class="o">.</span><span class="n">holder</span> <span class="o">==</span> <span class="n">holder</span>
+</code></pre></div>
+
+
+<h2 id="change-relationships-between-entities">Change relationships between entities</h2>
+<p>As with <code>Nested</code> it is possible to change related data</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Relationship</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">KeyNested</span><span class="p">,</span> <span class="n">Storage</span>
+
+
+<span class="k">class</span> <span class="nc">SomeEntity</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">holder</span><span class="p">:</span> <span class="s1">&#39;EntityHolder&#39;</span> <span class="o">=</span> <span class="n">Relationship</span><span class="p">(</span><span class="n">entity_type</span><span class="o">=</span><span class="s1">&#39;EntityHolder&#39;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">EntityHolder</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="n">entity</span><span class="p">:</span> <span class="n">SomeEntity</span> <span class="o">=</span> <span class="n">KeyNested</span><span class="p">(</span>
+        <span class="n">related_entity_field</span><span class="o">=</span><span class="n">SomeEntity</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+        <span class="n">origin</span><span class="o">=</span><span class="s1">&#39;entity_id&#39;</span><span class="p">,</span>
+        <span class="n">back_relation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+<span class="n">entity1</span> <span class="o">=</span> <span class="n">SomeEntity</span><span class="p">({</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">123</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;entity1&#39;</span><span class="p">},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">)</span>
+<span class="n">entity2</span> <span class="o">=</span> <span class="n">SomeEntity</span><span class="p">({</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">321</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;entity2&#39;</span><span class="p">},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">)</span>
+<span class="n">holder</span> <span class="o">=</span> <span class="n">EntityHolder</span><span class="p">(</span>
+    <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;entity_id&#39;</span><span class="p">:</span> <span class="mi">123</span><span class="p">},</span>
+    <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">holder</span><span class="o">.</span><span class="n">entity</span> <span class="o">=</span> <span class="n">entity2</span>
+
+<span class="k">assert</span> <span class="n">entity1</span><span class="o">.</span><span class="n">holder</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="k">assert</span> <span class="n">entity2</span><span class="o">.</span><span class="n">holder</span> <span class="ow">is</span> <span class="n">holder</span>
+<span class="k">assert</span> <span class="n">holder</span><span class="o">.</span><span class="n">entity</span> <span class="ow">is</span> <span class="n">entity2</span>
+<span class="k">assert</span> <span class="n">holder</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span><span class="s1">&#39;entity_id&#39;</span><span class="p">:</span> <span class="mi">321</span><span class="p">}</span>
 </code></pre></div>
                 
               
@@ -516,14 +577,14 @@
     </div>
     
       <script src="../../assets/javascripts/vendor.d710d30a.min.js"></script>
-      <script src="../../assets/javascripts/bundle.7f4f3c92.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      <script src="../../assets/javascripts/bundle.b39636ac.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
       
       <script>
         app = initialize({
           base: "../..",
           features: [],
           search: Object.assign({
-            worker: "../../assets/javascripts/worker/search.9b3611bd.min.js"
+            worker: "../../assets/javascripts/worker/search.a68abb33.min.js"
           }, typeof search !== "undefined" && search)
         })
       </script>

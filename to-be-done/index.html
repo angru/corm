@@ -11,7 +11,7 @@
       
       
       <link rel="shortcut icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.3.2">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.4.0">
     
     
       
@@ -317,8 +317,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#change-data-through-relationships" class="md-nav__link">
-    Change data through relationships
+  <a href="#storage-context" class="md-nav__link">
+    Storage context
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#namespaces" class="md-nav__link">
+    Namespaces
   </a>
   
 </li>
@@ -387,8 +394,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#change-data-through-relationships" class="md-nav__link">
-    Change data through relationships
+  <a href="#storage-context" class="md-nav__link">
+    Storage context
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#namespaces" class="md-nav__link">
+    Namespaces
   </a>
   
 </li>
@@ -452,43 +466,55 @@
 </code></pre></div>
 
 
-<h2 id="change-data-through-relationships">Change data through relationships</h2>
-<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">typing</span> <span class="k">as</span> <span class="nn">t</span>
-
-<span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Nested</span>
-
-
-
-<span class="k">class</span> <span class="nc">Address</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
-    <span class="n">street</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="n">number</span><span class="p">:</span> <span class="nb">int</span>
+<h2 id="storage-context">Storage context</h2>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">storage_ctx</span>
 
 <span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
-    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="n">addresses</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="n">Address</span><span class="p">]</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">(</span><span class="n">entity_type</span><span class="o">=</span><span class="n">Address</span><span class="p">,</span> <span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
 
 
-<span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
-<span class="n">john</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span>
-    <span class="n">data</span><span class="o">=</span><span class="p">{</span>
-        <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;John&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;addresses&#39;</span><span class="p">:</span> <span class="p">[{</span><span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;First&#39;</span><span class="p">,</span> <span class="s1">&#39;number&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}]</span>
-    <span class="p">},</span>
-    <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">additional_address</span> <span class="o">=</span> <span class="n">Address</span><span class="p">(</span>
-    <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;Second&#39;</span><span class="p">,</span> <span class="s1">&#39;number&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="k">with</span> <span class="n">storage_ctx</span><span class="p">:</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">})</span>
+</code></pre></div>
 
-<span class="n">john</span><span class="o">.</span><span class="n">addresses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">additional_address</span><span class="p">)</span>
 
-<span class="k">assert</span> <span class="n">john</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span>
-    <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;John&#39;</span><span class="p">,</span>
-    <span class="s1">&#39;addresses&#39;</span><span class="p">:</span> <span class="p">[</span>
-        <span class="p">{</span><span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;First&#39;</span><span class="p">,</span> <span class="s1">&#39;number&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
-        <span class="p">{</span><span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;Second&#39;</span><span class="p">,</span> <span class="s1">&#39;number&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span>
-    <span class="p">],</span>
-<span class="p">}</span>
+<h2 id="namespaces">Namespaces</h2>
+<p>Right now it is not possible to define few entities with same name, for example there are two files:</p>
+<p><em>a.py</em></p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Entity</span>
+
+<span class="k">class</span> <span class="nc">Foo</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
+</code></pre></div>
+
+
+<p>and same in <em>b.py</em> will cause error</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Entity</span>
+
+<span class="k">class</span> <span class="nc">Foo</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
+</code></pre></div>
+
+
+<p>Solution</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Namespace</span>
+
+<span class="n">namespace1</span> <span class="o">=</span> <span class="n">Namespace</span><span class="p">()</span>
+<span class="n">namespace2</span> <span class="o">=</span> <span class="n">Namespace</span><span class="p">()</span>
+
+<span class="c1"># a.py</span>
+<span class="k">class</span> <span class="nc">Foo</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+        <span class="n">namespace</span> <span class="o">=</span> <span class="n">namespace1</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
+
+<span class="c1"># b.py</span>
+<span class="k">class</span> <span class="nc">Foo</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+        <span class="n">namespace</span> <span class="o">=</span> <span class="n">namespace2</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
 </code></pre></div>
 
 
@@ -589,14 +615,14 @@
     </div>
     
       <script src="../assets/javascripts/vendor.d710d30a.min.js"></script>
-      <script src="../assets/javascripts/bundle.7f4f3c92.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      <script src="../assets/javascripts/bundle.b39636ac.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
       
       <script>
         app = initialize({
           base: "..",
           features: [],
           search: Object.assign({
-            worker: "../assets/javascripts/worker/search.9b3611bd.min.js"
+            worker: "../assets/javascripts/worker/search.a68abb33.min.js"
           }, typeof search !== "undefined" && search)
         })
       </script>

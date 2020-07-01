@@ -11,7 +11,7 @@
       
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.3.2">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.4.0">
     
     
       
@@ -266,13 +266,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#manually-related-entities" class="md-nav__link">
-    Manually related entities
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#bidirectional-relationships" class="md-nav__link">
     Bidirectional relationships
   </a>
@@ -282,6 +275,20 @@
         <li class="md-nav__item">
   <a href="#self-nested" class="md-nav__link">
     Self-nested
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#change-relationships-between-entities" class="md-nav__link">
+    Change relationships between entities
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#manually-related-entities" class="md-nav__link">
+    Manually related entities
   </a>
   
 </li>
@@ -389,13 +396,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#manually-related-entities" class="md-nav__link">
-    Manually related entities
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#bidirectional-relationships" class="md-nav__link">
     Bidirectional relationships
   </a>
@@ -405,6 +405,20 @@
         <li class="md-nav__item">
   <a href="#self-nested" class="md-nav__link">
     Self-nested
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#change-relationships-between-entities" class="md-nav__link">
+    Change relationships between entities
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#manually-related-entities" class="md-nav__link">
+    Manually related entities
   </a>
   
 </li>
@@ -439,6 +453,7 @@
     <span class="n">street</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">number</span><span class="p">:</span> <span class="nb">int</span>
 
+
 <span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">address</span><span class="p">:</span> <span class="n">Address</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">(</span><span class="n">entity_type</span><span class="o">=</span><span class="n">Address</span><span class="p">)</span>
@@ -446,7 +461,13 @@
 
 <span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
 <span class="n">john</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span>
-    <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;John&#39;</span><span class="p">,</span> <span class="s1">&#39;address&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;First&#39;</span><span class="p">,</span> <span class="s1">&#39;number&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}},</span>
+    <span class="n">data</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;John&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;address&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;First&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;number&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">},</span>
     <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">,</span>
 <span class="p">)</span>
 
@@ -455,56 +476,33 @@
 </code></pre></div>
 
 
-<h2 id="manually-related-entities">Manually related entities</h2>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">,</span> <span class="n">RelationType</span>
-
-
-<span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
-
-<span class="k">class</span> <span class="nc">Address</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
-    <span class="n">street</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="n">number</span><span class="p">:</span> <span class="nb">int</span>
-
-<span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
-    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="n">address</span><span class="p">:</span> <span class="n">Address</span> <span class="o">=</span> <span class="n">Relationship</span><span class="p">(</span>
-        <span class="n">entity_type</span><span class="o">=</span><span class="n">Address</span><span class="p">,</span> <span class="n">relation_type</span><span class="o">=</span><span class="n">RelationType</span><span class="o">.</span><span class="n">PARENT</span><span class="p">,</span>
-    <span class="p">)</span>
-
-
-<span class="n">address</span> <span class="o">=</span> <span class="n">Address</span><span class="p">({</span><span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;First&#39;</span><span class="p">,</span> <span class="s1">&#39;number&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span> <span class="n">storage</span><span class="p">)</span>
-<span class="n">john</span> <span class="o">=</span> <span class="n">User</span><span class="p">({</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;John&#39;</span><span class="p">},</span> <span class="n">storage</span><span class="p">)</span>
-
-<span class="n">storage</span><span class="o">.</span><span class="n">make_relation</span><span class="p">(</span>
-    <span class="n">from_</span><span class="o">=</span><span class="n">john</span><span class="p">,</span> <span class="n">to_</span><span class="o">=</span><span class="n">address</span><span class="p">,</span> <span class="n">relation_type</span><span class="o">=</span><span class="n">RelationType</span><span class="o">.</span><span class="n">PARENT</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="k">assert</span> <span class="n">john</span><span class="o">.</span><span class="n">address</span> <span class="o">==</span> <span class="n">address</span>
-</code></pre></div>
-
-
 <h2 id="bidirectional-relationships">Bidirectional relationships</h2>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">,</span> <span class="n">Nested</span><span class="p">,</span> <span class="n">RelationType</span>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">,</span> <span class="n">Nested</span>
 
-
-<span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
 
 <span class="k">class</span> <span class="nc">Address</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
     <span class="n">street</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">number</span><span class="p">:</span> <span class="nb">int</span>
-    <span class="n">user</span><span class="p">:</span> <span class="s1">&#39;User&#39;</span> <span class="o">=</span> <span class="n">Relationship</span><span class="p">(</span>
-        <span class="n">entity_type</span><span class="o">=</span><span class="s1">&#39;User&#39;</span><span class="p">,</span> <span class="n">relation_type</span><span class="o">=</span><span class="n">RelationType</span><span class="o">.</span><span class="n">CHILD</span><span class="p">,</span>
-    <span class="p">)</span>
+    <span class="n">user</span><span class="p">:</span> <span class="s1">&#39;User&#39;</span> <span class="o">=</span> <span class="n">Relationship</span><span class="p">(</span><span class="n">entity_type</span><span class="o">=</span><span class="s1">&#39;User&#39;</span><span class="p">)</span>
+
 
 <span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">address</span><span class="p">:</span> <span class="n">Address</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">(</span>
-        <span class="n">entity_type</span><span class="o">=</span><span class="n">Address</span><span class="p">,</span> <span class="n">back_relation_type</span><span class="o">=</span><span class="n">RelationType</span><span class="o">.</span><span class="n">CHILD</span><span class="p">,</span>
+        <span class="n">entity_type</span><span class="o">=</span><span class="n">Address</span><span class="p">,</span>
+        <span class="n">back_relation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span>
 
 
+<span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
 <span class="n">john</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span>
-    <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;John&#39;</span><span class="p">,</span> <span class="s1">&#39;address&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;First&#39;</span><span class="p">,</span> <span class="s1">&#39;number&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}},</span>
+    <span class="n">data</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;John&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;address&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;First&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;number&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">},</span>
     <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">,</span>
 <span class="p">)</span>
 
@@ -515,16 +513,19 @@
 <h2 id="self-nested">Self-nested</h2>
 <div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">typing</span> <span class="k">as</span> <span class="nn">t</span>
 
-<span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">,</span> <span class="n">Nested</span><span class="p">,</span> <span class="n">RelationType</span>
+<span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">,</span> <span class="n">Nested</span>
+
 
 <span class="k">class</span> <span class="nc">Item</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
     <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">items</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="s1">&#39;Item&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">(</span>
-        <span class="n">entity_type</span><span class="o">=</span><span class="s1">&#39;Item&#39;</span><span class="p">,</span> <span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">back_relation_type</span><span class="o">=</span><span class="n">RelationType</span><span class="o">.</span><span class="n">CHILD</span><span class="p">,</span>
+        <span class="n">entity_type</span><span class="o">=</span><span class="s1">&#39;Item&#39;</span><span class="p">,</span>
+        <span class="n">back_relation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="n">parent</span><span class="p">:</span> <span class="s1">&#39;Item&#39;</span> <span class="o">=</span> <span class="n">Relationship</span><span class="p">(</span>
-        <span class="n">entity_type</span><span class="o">=</span><span class="s1">&#39;Item&#39;</span><span class="p">,</span> <span class="n">relation_type</span><span class="o">=</span><span class="n">RelationType</span><span class="o">.</span><span class="n">CHILD</span><span class="p">,</span>
-    <span class="p">)</span>
+    <span class="n">parent</span><span class="p">:</span> <span class="s1">&#39;Item&#39;</span> <span class="o">=</span> <span class="n">Relationship</span><span class="p">(</span><span class="n">entity_type</span><span class="o">=</span><span class="s1">&#39;Item&#39;</span><span class="p">)</span>
+
 
 <span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
 <span class="n">item1</span> <span class="o">=</span> <span class="n">Item</span><span class="p">({</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;items&#39;</span><span class="p">:</span> <span class="p">[{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span> <span class="p">{</span><span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}]},</span> <span class="n">storage</span><span class="p">)</span>
@@ -540,6 +541,160 @@
 <span class="k">assert</span> <span class="n">item3</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="mi">3</span>
 <span class="k">assert</span> <span class="n">item3</span><span class="o">.</span><span class="n">parent</span> <span class="o">==</span> <span class="n">item1</span>
 <span class="k">assert</span> <span class="n">item3</span><span class="o">.</span><span class="n">items</span> <span class="o">==</span> <span class="p">[]</span>
+</code></pre></div>
+
+
+<h2 id="change-relationships-between-entities">Change relationships between entities</h2>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">,</span> <span class="n">Nested</span><span class="p">,</span> <span class="n">Storage</span>
+
+
+<span class="k">class</span> <span class="nc">Address</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="n">street</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">user</span><span class="p">:</span> <span class="s1">&#39;User&#39;</span> <span class="o">=</span> <span class="n">Relationship</span><span class="p">(</span><span class="n">entity_type</span><span class="o">=</span><span class="s1">&#39;User&#39;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">address</span><span class="p">:</span> <span class="n">Address</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">(</span>
+        <span class="n">entity_type</span><span class="o">=</span><span class="n">Address</span><span class="p">,</span>
+        <span class="n">back_relation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+<span class="n">john</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span>
+    <span class="n">data</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;John&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="s1">&#39;john smith&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;address&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;kirova&#39;</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">},</span>
+    <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">old_address</span> <span class="o">=</span> <span class="n">john</span><span class="o">.</span><span class="n">address</span>
+
+<span class="k">assert</span> <span class="n">old_address</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="n">john</span>
+
+<span class="n">address</span> <span class="o">=</span> <span class="n">Address</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;lenina&#39;</span><span class="p">},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">)</span>
+<span class="n">john</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="n">address</span>
+
+<span class="k">assert</span> <span class="n">old_address</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="k">assert</span> <span class="n">address</span><span class="o">.</span><span class="n">user</span> <span class="o">==</span> <span class="n">john</span>
+<span class="k">assert</span> <span class="n">john</span><span class="o">.</span><span class="n">address</span> <span class="ow">is</span> <span class="n">address</span>
+</code></pre></div>
+
+
+<p>Also it works with <code>many=True</code></p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">typing</span> <span class="k">as</span> <span class="nn">t</span>
+
+<span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">,</span> <span class="n">Nested</span><span class="p">,</span> <span class="n">Storage</span>
+
+
+<span class="k">class</span> <span class="nc">Address</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="n">street</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">user</span><span class="p">:</span> <span class="s1">&#39;User&#39;</span> <span class="o">=</span> <span class="n">Relationship</span><span class="p">(</span><span class="n">entity_type</span><span class="o">=</span><span class="s1">&#39;User&#39;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">addresses</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="n">Address</span><span class="p">]</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">(</span>
+        <span class="n">entity_type</span><span class="o">=</span><span class="n">Address</span><span class="p">,</span>
+        <span class="n">back_relation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">many</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+<span class="n">john</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span>
+    <span class="n">data</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;John&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="s1">&#39;john smith&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;addresses&#39;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;kirova 1&#39;</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;kirova 2&#39;</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">],</span>
+    <span class="p">},</span>
+    <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">old_address1</span><span class="p">,</span> <span class="n">old_address2</span> <span class="o">=</span> <span class="n">john</span><span class="o">.</span><span class="n">addresses</span>
+
+<span class="c1"># you can change existing list</span>
+<span class="n">john</span><span class="o">.</span><span class="n">addresses</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">old_address1</span><span class="p">)</span>
+
+<span class="k">assert</span> <span class="n">old_address1</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="k">assert</span> <span class="n">old_address2</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="n">john</span>
+
+<span class="n">john</span><span class="o">.</span><span class="n">addresses</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+<span class="k">assert</span> <span class="n">old_address1</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="k">assert</span> <span class="n">old_address2</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="k">assert</span> <span class="n">john</span><span class="o">.</span><span class="n">addresses</span> <span class="o">==</span> <span class="p">[]</span>
+
+<span class="n">new_address1</span> <span class="o">=</span> <span class="n">Address</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;lenina 1&#39;</span><span class="p">},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">)</span>
+<span class="n">new_address2</span> <span class="o">=</span> <span class="n">Address</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;lenina 2&#39;</span><span class="p">},</span> <span class="n">storage</span><span class="o">=</span><span class="n">storage</span><span class="p">)</span>
+
+<span class="n">john</span><span class="o">.</span><span class="n">addresses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_address1</span><span class="p">)</span>
+
+<span class="k">assert</span> <span class="n">new_address1</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="n">john</span>
+<span class="k">assert</span> <span class="n">john</span><span class="o">.</span><span class="n">addresses</span> <span class="o">==</span> <span class="p">[</span><span class="n">new_address1</span><span class="p">]</span>
+
+<span class="n">john</span><span class="o">.</span><span class="n">addresses</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">new_address2</span><span class="p">])</span>
+
+<span class="k">assert</span> <span class="n">new_address2</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="n">john</span>
+<span class="k">assert</span> <span class="n">john</span><span class="o">.</span><span class="n">addresses</span> <span class="o">==</span> <span class="p">[</span><span class="n">new_address1</span><span class="p">,</span> <span class="n">new_address2</span><span class="p">]</span>
+
+<span class="c1"># or completely replace it</span>
+<span class="n">john</span><span class="o">.</span><span class="n">addresses</span> <span class="o">=</span> <span class="p">[</span><span class="n">old_address1</span><span class="p">]</span>
+
+<span class="k">assert</span> <span class="n">new_address1</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="k">assert</span> <span class="n">new_address2</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="k">assert</span> <span class="n">old_address1</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="n">john</span>
+</code></pre></div>
+
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>As you can see it changes both user and address, but keep in mind it is possible to change relationship through <code>Nested</code> but not through <code>Relationship</code>. In this example <code>address.user = user</code> will raise <code>ValueError</code></p>
+</div>
+<h2 id="manually-related-entities">Manually related entities</h2>
+<p>It is not common case but is is able to use this way</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">corm</span> <span class="kn">import</span> <span class="n">Storage</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">,</span> <span class="n">RelationType</span>
+
+<span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">Address</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="n">street</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">number</span><span class="p">:</span> <span class="nb">int</span>
+
+
+<span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">address</span><span class="p">:</span> <span class="n">Address</span> <span class="o">=</span> <span class="n">Relationship</span><span class="p">(</span>
+        <span class="n">entity_type</span><span class="o">=</span><span class="n">Address</span><span class="p">,</span>
+        <span class="n">relation_type</span><span class="o">=</span><span class="n">RelationType</span><span class="o">.</span><span class="n">PARENT</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="n">address</span> <span class="o">=</span> <span class="n">Address</span><span class="p">({</span><span class="s1">&#39;street&#39;</span><span class="p">:</span> <span class="s1">&#39;First&#39;</span><span class="p">,</span> <span class="s1">&#39;number&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span> <span class="n">storage</span><span class="p">)</span>
+<span class="n">john</span> <span class="o">=</span> <span class="n">User</span><span class="p">({</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;John&#39;</span><span class="p">},</span> <span class="n">storage</span><span class="p">)</span>
+
+<span class="n">storage</span><span class="o">.</span><span class="n">make_relation</span><span class="p">(</span>
+    <span class="n">from_</span><span class="o">=</span><span class="n">john</span><span class="p">,</span>
+    <span class="n">to_</span><span class="o">=</span><span class="n">address</span><span class="p">,</span>
+    <span class="n">relation_type</span><span class="o">=</span><span class="n">RelationType</span><span class="o">.</span><span class="n">PARENT</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">assert</span> <span class="n">john</span><span class="o">.</span><span class="n">address</span> <span class="o">==</span> <span class="n">address</span>
 </code></pre></div>
                 
               
@@ -608,14 +763,14 @@
     </div>
     
       <script src="../../assets/javascripts/vendor.d710d30a.min.js"></script>
-      <script src="../../assets/javascripts/bundle.7f4f3c92.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      <script src="../../assets/javascripts/bundle.b39636ac.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
       
       <script>
         app = initialize({
           base: "../..",
           features: [],
           search: Object.assign({
-            worker: "../../assets/javascripts/worker/search.9b3611bd.min.js"
+            worker: "../../assets/javascripts/worker/search.a68abb33.min.js"
           }, typeof search !== "undefined" && search)
         })
       </script>
