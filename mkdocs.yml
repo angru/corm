@@ -19,3 +19,5 @@ nav:
 markdown_extensions:
   - codehilite
   - admonition
+  - markdown_include.include:
+        base_path: docs

@@ -22,47 +22,62 @@ address = Address(
 assert address.dict() == {'street': 'Second', 'number': 2}
 ```
 
-
-## Change data through relationships
+## Storage context
 
 ```python
-import typing as t
-
-from corm import Storage, Entity, Nested
-
-
-
-class Address(Entity):
-    street: str
-    number: int
+from corm import Entity, storage_ctx
 
 class User(Entity):
-    name: str
-    addresses: t.List[Address] = Nested(entity_type=Address, many=True)
+    id: int
 
 
-storage = Storage()
-john = User(
-    data={
-        'name': 'John',
-        'addresses': [{'street': 'First', 'number': 1}]
-    },
-    storage=storage,
-)
-additional_address = Address(
-    data={'street': 'Second', 'number': 2}, storage=storage,
-)
+with storage_ctx:
+    user = User(data={'id': 1})
 
-john.addresses.append(additional_address)
-
-assert john.dict() == {
-    'name': 'John',
-    'addresses': [
-        {'street': 'First', 'number': 1},
-        {'street': 'Second', 'number': 2},
-    ],
-}
 ```
+
+## Namespaces
+
+Right now it is not possible to define few entities with same name, for example there are two files:
+
+_a.py_
+```python
+from corm import Entity
+
+class Foo(Entity):
+    id: int
+```
+and same in _b.py_ will cause error
+```python
+from corm import Entity
+
+class Foo(Entity):
+    id: int
+```
+
+Solution
+
+```python
+from corm import Entity, Namespace
+
+namespace1 = Namespace()
+namespace2 = Namespace()
+
+# a.py
+class Foo(Entity):
+    class Config:
+        namespace = namespace1
+
+    id: int
+
+# b.py
+class Foo(Entity):
+    class Config:
+        namespace = namespace2
+
+    id: int
+```
+
 
 ## Entity migration between different instances of storage
 

@@ -2,6 +2,8 @@
 
 _Data structures relationships made easy_
 
+corm is in early development. API can change.
+
 
 [![build](https://github.com/angru/corm/workflows/build/badge.svg)](https://github.com/angru/corm/actions?query=workflow%3Abuild+branch%3Amaster++)
 [![codecov](https://codecov.io/gh/angru/corm/branch/master/graph/badge.svg)](https://codecov.io/gh/angru/corm)
@@ -14,7 +16,7 @@ See [documentation](https://angru.github.io/corm/) for more details.
 
 `pip install corm`
 
-# Rationate
+# Rationale
 
 * сложно помнить ключи словарей, если структура данных большая
 * организация двусторонних связей между сущностями, особенно иерархических структурах данных

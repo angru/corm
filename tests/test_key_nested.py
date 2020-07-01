@@ -193,3 +193,25 @@ def test_change_values():
             'id': 321,
         }],
     }
+
+
+@pytest.mark.skip(reason='Not implemented yet')
+def test_change_key_value():
+    class SomeEntity(Entity):
+        id: int = Field(pk=True)
+        name: str
+
+    class EntityHolder(Entity):
+        entity: SomeEntity = KeyNested(
+            related_entity_field=SomeEntity.id,
+            origin='entity_id',
+        )
+
+    storage = Storage()
+    entity = SomeEntity({'id': 123, 'name': 'entity'}, storage=storage)
+    holder = EntityHolder({'entity_id': 123}, storage=storage)
+
+    entity.id = 321
+
+    assert holder.entity == entity
+    assert holder.dict() == {'entity_id': 321}

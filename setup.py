@@ -14,7 +14,7 @@ def open_file(filename):
 
 setup(
     name='corm',
-    version='0.0.1a',
+    version='0.0.2',
     description='Relationships between data structures',
     long_description=open_file('README.md'),
     long_description_content_type='text/markdown',

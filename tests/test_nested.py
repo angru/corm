@@ -288,6 +288,7 @@ def test_change_back_relationship_when_many():
 
     assert old_address1.user is None
     assert old_address2.user is None
+    assert john.addresses == []
 
     address1 = Address(data={'street': 'lenina 1'}, storage=storage)
     address2 = Address(data={'street': 'lenina 2'}, storage=storage)
@@ -295,10 +296,12 @@ def test_change_back_relationship_when_many():
     john.addresses.append(address1)
 
     assert address1.user is john
+    assert john.addresses == [address1]
 
     john.addresses.extend([address2])
 
     assert address2.user is john
+    assert john.addresses == [address1, address2]
     assert john.dict() == {
         'id': 1,
         'name': 'John',
