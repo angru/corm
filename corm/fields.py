@@ -17,10 +17,22 @@ def proxy_factory(value: t.Any) -> t.Callable[[], t.Any]:
 
 class KeyManager:
     def get(self, data):
+        raise NotImplementedError
+
+    def prepare_to_set(self, entity: 'Entity') -> t.Any:
+        raise NotImplementedError
+
+
+class DefaultKeyManager:
+    def __init__(self, field: 'Field'):
+        self.field = field
+
+    def get(self, data):
         return data
 
-    def set(self, data, value) -> t.NoReturn:
-        pass
+    def prepare_to_set(self, entity: 'Entity') -> t.Any:
+        if entity:
+            return getattr(entity, self.field.name)
 
 
 class RelationshipList(list):
@@ -92,6 +104,10 @@ class RelationshipList(list):
         super().clear()
 
 
+class KeyRelationshipList(list):
+    """TODO"""
+
+
 class Field:
     name: str
     pk: bool
@@ -118,7 +134,7 @@ class Field:
 
         self.default = default
 
-    def __get__(self, instance: 'Entity', owner):
+    def __get__(self, instance: 'Entity', owner) -> t.Any:
         if instance:
             return instance._data.get(self.origin)
         else:
@@ -130,6 +146,8 @@ class Field:
                 instance._data[self.origin] = value
             else:
                 raise ValueError(f'Field \'{self.name}\' is read only')
+        else:
+            raise ValueError('Not able to change field on class')
 
     def __set_name__(self, owner, name):
         self.name = name
@@ -163,7 +181,7 @@ class Nested(Field):
         self,
         entity_type: t.Union[str, t.Type['Entity']],
         many: bool = False,
-        back_relation: t.Optional[RelationType] = None,
+        back_relation: t.Union[bool, RelationType] = False,
         mode: AccessMode = AccessMode.ALL,
         default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
         origin: str = None,
@@ -175,6 +193,9 @@ class Nested(Field):
             origin=origin,
             destination=destination,
         )
+
+        if isinstance(back_relation, bool) and back_relation:
+            back_relation = RelationType.RELATED
 
         self._entity_type = entity_type
         self.many = many
@@ -263,7 +284,7 @@ class Relationship(Field):
     def __init__(
         self,
         entity_type: t.Union[str, t.Type['Entity']],
-        relation_type: RelationType,
+        relation_type: RelationType = RelationType.RELATED,
         many: bool = False,
     ):
         super().__init__(mode=AccessMode.GET)
@@ -301,13 +322,14 @@ class KeyNested(Field):
     def __init__(
         self,
         related_entity_field: t.Union['Field', t.Any],
-        back_relation: t.Optional[RelationType] = None,
+        back_relation: t.Union[bool, RelationType] = False,
         many: bool = False,
-        mode: AccessMode = AccessMode.GET_LOAD,
+        mode: AccessMode = AccessMode.GET_SET_LOAD,
         default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
         origin: t.Optional[str] = None,
         destination: t.Optional[str] = None,
         key_manager: t.Optional[KeyManager] = None,
+        required: bool = True,
     ):
         if not related_entity_field.pk:
             raise ValueError(
@@ -321,10 +343,16 @@ class KeyNested(Field):
             default=default,
         )
 
+        if isinstance(back_relation, bool) and back_relation:
+            back_relation = RelationType.RELATED
+
         self.related_entity_field = related_entity_field
-        self.key_manager = key_manager or KeyManager()
+        self.key_manager = key_manager or DefaultKeyManager(
+            field=related_entity_field,
+        )
         self.many = many
         self.back_relation = back_relation
+        self.required = required
 
     def _load_one(self, data: t.Any, storage: 'Storage', parent: 'Entity'):
         if self.back_relation:
@@ -338,51 +366,108 @@ class KeyNested(Field):
     def load(self, data: dict, instance: 'Entity') -> t.Any:
         storage = instance.storage
         data = super().load(data, instance)
-        key = self.key_manager.get(data)
 
-        if data is not None:
-            if self.many:
-                for item in key:
-                    self._load_one(item, storage, instance)
-            else:
+        if data is None:
+            return
+
+        if self.many:
+            for item in data:
+                key = self.key_manager.get(item)
                 self._load_one(key, storage, instance)
+        else:
+            key = self.key_manager.get(data)
+            self._load_one(key, storage, instance)
 
         return data
 
     def __get__(self, instance: 'Entity', owner):
         data = super().__get__(instance, owner)
 
-        if not instance:
+        if not instance or data is None:
             return data
 
-        key = self.key_manager.get(data)
+        if self.many:
+            result = []
 
-        if key is not None:
-            if self.many:
-                result = []
+            for item in data:
+                key = self.key_manager.get(item)
 
-                for item in key:
-                    entity = instance.storage.get(
-                        self.related_entity_field,
-                        item,
-                    )
-
-                    if not entity:
-                        raise ValueError(
-                            f'Can\'t find {self.related_entity_field}={item} '
-                            f'in storage',
-                        )
-
-                    result.append(entity)
-
-                return result
-            else:
-                entity = instance.storage.get(self.related_entity_field, key)
+                entity = instance.storage.get(
+                    field=self.related_entity_field,
+                    entity_key=key,
+                )
 
                 if not entity:
-                    raise ValueError(
-                        f'Can\'t find {self.related_entity_field}={key} '
-                        f'in storage',
+                    if self.required:
+                        raise ValueError(
+                            f'Can\'t find {self.related_entity_field}={key} '
+                            f'in storage',
+                        )
+                    else:
+                        continue
+
+                result.append(entity)
+
+            return result
+        else:
+            key = self.key_manager.get(data)
+            entity = instance.storage.get(self.related_entity_field, key)
+
+            if not entity and self.required:
+                raise ValueError(
+                    f'Can\'t find {self.related_entity_field}={key} '
+                    f'in storage',
+                )
+
+            return entity
+
+    def __set__(
+        self,
+        instance: 'Entity',
+        value: t.Union['Entity', t.List['Entity']],
+    ):
+        if not instance:
+            return super().__set__(instance, value)
+
+        if self.many:
+            if self.back_relation:
+                for old_related_entity in getattr(instance, self.name):
+                    instance.storage.remove_relation(
+                        from_=old_related_entity,
+                        to_=instance,
+                        relation_type=self.back_relation,
                     )
 
-                return entity
+            new_data = []
+
+            for related_entity in value:
+                new_data.append(self.key_manager.prepare_to_set(related_entity))
+
+                if self.back_relation:
+                    instance.storage.make_relation(
+                        from_=related_entity,
+                        to_=instance,
+                        relation_type=self.back_relation,
+                    )
+
+        else:
+            if self.back_relation:
+                old_related_entity = getattr(instance, self.name)
+
+                if old_related_entity:
+                    instance.storage.remove_relation(
+                        from_=old_related_entity,
+                        to_=instance,
+                        relation_type=self.back_relation,
+                    )
+
+            new_data = self.key_manager.prepare_to_set(value)
+
+            if self.back_relation:
+                instance.storage.make_relation(
+                    from_=value,
+                    to_=instance,
+                    relation_type=self.back_relation,
+                )
+
+        super().__set__(instance, new_data)

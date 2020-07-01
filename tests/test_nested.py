@@ -2,7 +2,7 @@ import typing as t
 
 import pytest
 
-from corm import Storage, Entity, Field, Nested, RelationType, Relationship
+from corm import Storage, Entity, Field, Nested, Relationship
 
 
 def test_nested():
@@ -37,13 +37,10 @@ def test_self_related():
         items: t.List['Item'] = Nested(    # noqa: F821
             entity_type='Item',
             many=True,
-            back_relation=RelationType.CHILD,
+            back_relation=True,
             default=list,
         )
-        parent: 'Item' = Relationship(
-            entity_type='Item',
-            relation_type=RelationType.CHILD,
-        )    # noqa: F821
+        parent: 'Item' = Relationship(entity_type='Item')    # noqa: F821
 
     storage = Storage()
     item1 = Item(
@@ -151,16 +148,13 @@ def test_set_value_many():
 def test_set_value_with_back_relationship():
     class Address(Entity):
         street: str
-        user: 'User' = Relationship(
-            entity_type='User',
-            relation_type=RelationType.RELATED,
-        )
+        user: 'User' = Relationship(entity_type='User')
 
     class User(Entity):
         id: int
         address: Address = Nested(
             entity_type=Address,
-            back_relation=RelationType.RELATED,
+            back_relation=True,
         )
 
     storage = Storage()
@@ -199,16 +193,13 @@ def test_set_value_with_back_relationship():
 def test_set_value_many_with_back_relationship():
     class Address(Entity):
         street: str
-        user: 'User' = Relationship(
-            entity_type='User',
-            relation_type=RelationType.RELATED,
-        )
+        user: 'User' = Relationship(entity_type='User')
 
     class User(Entity):
         id: int
         addresses: t.List[Address] = Nested(
             entity_type=Address,
-            back_relation=RelationType.RELATED,
+            back_relation=True,
             many=True,
         )
 
@@ -258,16 +249,13 @@ def test_set_value_many_with_back_relationship():
 def test_change_back_relationship_when_many():
     class Address(Entity):
         street: str
-        user: 'User' = Relationship(
-            entity_type='User',
-            relation_type=RelationType.RELATED,
-        )
+        user: 'User' = Relationship(entity_type='User')
 
     class User(Entity):
         id: int
         addresses: t.List[Address] = Nested(
             entity_type=Address,
-            back_relation=RelationType.RELATED,
+            back_relation=True,
             many=True,
         )
 

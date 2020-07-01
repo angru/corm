@@ -26,7 +26,11 @@ class EntityMeta(type):
 
                     if attr_value.pk:
                         pk_fields.append(attr_value)
-                elif not attr_name.startswith('_'):
+                elif (
+                    not attr_name.startswith('_')
+                    and not isinstance(attr_value, property)    # noqa
+                    and not callable(attr_value)    # noqa
+                ):
                     fields[attr_name] = Field(default=attr_value)
 
             for attr_name, type_ in annotations.items():

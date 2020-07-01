@@ -2,7 +2,7 @@ import typing as t
 
 import pytest
 
-from corm import Entity, Field, KeyNested, Storage, Relationship, RelationType, KeyManager
+from corm import Entity, Field, KeyNested, Storage, Relationship, KeyManager
 
 
 def test_nested_key():
@@ -51,17 +51,14 @@ def test_make_back_relationship():
     class SomeEntity(Entity):
         id: int = Field(pk=True)
         name: str
-        holder: 'EntityHolder' = Relationship(
-            'EntityHolder',
-            relation_type=RelationType.RELATED,
-        )
+        holder: 'EntityHolder' = Relationship('EntityHolder')
 
     class EntityHolder(Entity):
         entities: t.List[SomeEntity] = KeyNested(
             related_entity_field=SomeEntity.id,
             origin='entity_ids',
             many=True,
-            back_relation=RelationType.RELATED,
+            back_relation=True,
         )
 
     storage = Storage()
@@ -85,13 +82,16 @@ def test_make_back_relationship():
 
 
 def test_complex_key():
-    class EntityKeyManager(KeyManager):
-        def get(self, data):
-            return [item['id'] for item in data]
-
     class SomeEntity(Entity):
         id: int = Field(pk=True)
         name: str
+
+    class EntityKeyManager(KeyManager):
+        def get(self, data):
+            return data['id']
+
+        def prepare_to_set(self, entity: SomeEntity) -> t.Any:
+            return {'id': entity.id}
 
     class ManyEntityHolder(Entity):
         entities: t.List[SomeEntity] = KeyNested(
@@ -120,3 +120,76 @@ def test_complex_key():
 
     assert holder.entities == [entity1, entity2]
     assert holder.dict() == {'entity_ids': [{'id': 123}, {'id': 321}]}
+
+
+def test_change_values():
+    class SomeEntity(Entity):
+        id: int = Field(pk=True)
+        name: str
+        holder: 'EntityHolder' = Relationship(entity_type='EntityHolder')
+        many_holder: 'ManyEntityHolder' = Relationship(
+            entity_type='ManyEntityHolder',
+        )
+
+    class EntityKeyManager(KeyManager):
+        def get(self, data):
+            return data['id']
+
+        def prepare_to_set(self, entity: SomeEntity) -> t.Any:
+            return {'id': entity.id}
+
+    class EntityHolder(Entity):
+        entity: SomeEntity = KeyNested(
+            related_entity_field=SomeEntity.id,
+            origin='entity_id',
+            key_manager=EntityKeyManager(),
+            back_relation=True,
+        )
+
+    class ManyEntityHolder(Entity):
+        entities: t.List[SomeEntity] = KeyNested(
+            related_entity_field=SomeEntity.id,
+            origin='entity_ids',
+            many=True,
+            back_relation=True,
+            key_manager=EntityKeyManager(),
+        )
+
+    storage = Storage()
+    entity1 = SomeEntity({'id': 123, 'name': 'entity1'}, storage=storage)
+    entity2 = SomeEntity({'id': 321, 'name': 'entity2'}, storage=storage)
+    holder = EntityHolder(
+        {
+            'entity_id': {
+                'id': 123,
+            },
+        },
+        storage=storage,
+    )
+
+    holder.entity = entity2
+
+    assert entity1.holder is None
+    assert entity2.holder is holder
+    assert holder.entity is entity2
+    assert holder.dict() == {'entity_id': {'id': 321}}
+
+    many_holder = ManyEntityHolder(
+        {
+            'entity_ids': [{
+                'id': 123,
+            }],
+        },
+        storage=storage,
+    )
+
+    many_holder.entities = [entity2]
+
+    assert many_holder.entities == [entity2]
+    assert entity1.many_holder is None
+    assert entity2.many_holder is many_holder
+    assert many_holder.dict() == {
+        'entity_ids': [{
+            'id': 321,
+        }],
+    }
