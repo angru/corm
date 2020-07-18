@@ -40,7 +40,7 @@ class RelationshipList(list):
         self,
         entity: 'Entity',
         items: t.Iterable['Entity'],
-        relation_type: RelationType = None,
+        relation_type: t.Any = None,
     ):
         super().__init__(items)
 
@@ -181,7 +181,7 @@ class Nested(Field):
         self,
         entity_type: t.Union[str, t.Type['Entity']],
         many: bool = False,
-        back_relation: t.Union[bool, RelationType] = False,
+        back_relation: t.Any = False,
         mode: AccessMode = AccessMode.ALL,
         default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
         origin: str = None,
@@ -284,7 +284,7 @@ class Relationship(Field):
     def __init__(
         self,
         entity_type: t.Union[str, t.Type['Entity']],
-        relation_type: RelationType = RelationType.RELATED,
+        relation_type: t.Any = RelationType.RELATED,
         many: bool = False,
     ):
         super().__init__(mode=AccessMode.GET)
@@ -347,7 +347,7 @@ class KeyNested(Field):
     def __init__(
         self,
         related_entity_field: t.Union['Field', t.Any],
-        back_relation: t.Union[bool, RelationType] = False,
+        back_relation: t.Any = False,
         many: bool = False,
         mode: AccessMode = AccessMode.GET_SET_LOAD,
         default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,

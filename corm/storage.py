@@ -4,8 +4,6 @@ import typing as t
 
 from collections import defaultdict
 
-from corm import constants
-
 if t.TYPE_CHECKING:
     from corm.entity import Entity, Field
 
@@ -41,7 +39,7 @@ class Storage:
         self,
         field_from: 'Field',
         key_from: t.Any,
-        relation_type: constants.RelationType,
+        relation_type: t.Any,
         to: 'Entity',
     ):
         entity = self.get(field_from, key_from)
@@ -57,7 +55,7 @@ class Storage:
         self,
         from_: t.Union['Entity', 'EntityRef'],
         to_: t.Union['Entity', 'EntityRef'],
-        relation_type: constants.RelationType,
+        relation_type: t.Any,
     ):
         # TODO: probably weakref will be better
         relations = self._relations[from_][type(to_), relation_type]
@@ -74,7 +72,7 @@ class Storage:
         self,
         entity: ['Entity', 'EntityRef'],
         related_entity_type: t.Type['Entity'],
-        relation_type: constants.RelationType,
+        relation_type: t.Any,
     ) -> t.List['Entity']:
         return self._relations[entity][related_entity_type, relation_type]
 
@@ -82,7 +80,7 @@ class Storage:
         self,
         entity: t.Union['Entity', 'EntityRef'],
         related_entity_type: t.Type['Entity'],
-        relation_type: constants.RelationType,
+        relation_type: t.Any,
     ) -> t.Optional['Entity']:
         entities = self._relations[entity][related_entity_type, relation_type]
 
@@ -93,7 +91,7 @@ class Storage:
         self,
         from_: t.Union['Entity', 'EntityRef'],
         to_: t.Union['Entity', 'EntityRef'],
-        relation_type: constants.RelationType,
+        relation_type: t.Any,
     ) -> t.NoReturn:
         self._relations[from_][type(to_), relation_type].remove(to_)
 
@@ -101,7 +99,7 @@ class Storage:
         self,
         entity: t.Union['Entity', 'EntityRef'],
         related_entity_type: t.Type['Entity'],
-        relation_type: constants.RelationType,
+        relation_type: t.Any,
     ) -> t.NoReturn:
         self._relations[entity][related_entity_type, relation_type].clear()
 
