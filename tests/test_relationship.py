@@ -113,7 +113,16 @@ def test_assign_new_value_to_relationship():
         data={'name': 'many holder'},
         storage=storage,
     )
-    many_holder.entities = [entity1, entity2]
+    many_holder.entities = [entity1]
+
+    assert many_holder.entities == [entity1]
+    assert storage.get_related_entities(
+        many_holder,
+        SomeEntity,
+        RelationType.RELATED,
+    ) == [entity1]
+
+    many_holder.entities.append(entity2)
 
     assert many_holder.entities == [entity1, entity2]
     assert storage.get_related_entities(
@@ -121,6 +130,15 @@ def test_assign_new_value_to_relationship():
         SomeEntity,
         RelationType.RELATED,
     ) == [entity1, entity2]
+
+    many_holder.entities.remove(entity2)
+
+    assert many_holder.entities == [entity1]
+    assert storage.get_related_entities(
+        many_holder,
+        SomeEntity,
+        RelationType.RELATED,
+    ) == [entity1]
 
     many_holder.entities = []
 
