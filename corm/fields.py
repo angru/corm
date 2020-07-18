@@ -317,6 +317,31 @@ class Relationship(Field):
                 self.relation_type,
             )
 
+    def __set__(self, instance, value):
+        if not instance:
+            return super().__set__(instance, value)
+
+        instance.storage.remove_relations(
+            instance,
+            self.entity_type,
+            self.relation_type,
+        )
+
+        if value:
+            if self.many:
+                for entity in value:
+                    instance.storage.make_relation(
+                        from_=instance,
+                        to_=entity,
+                        relation_type=self.relation_type,
+                    )
+            else:
+                instance.storage.make_relation(
+                    from_=instance,
+                    to_=value,
+                    relation_type=self.relation_type,
+                )
+
 
 class KeyNested(Field):
     def __init__(
