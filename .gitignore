@@ -130,7 +130,5 @@ dmypy.json
 
 .idea/
 
-.pre-commit-config.yaml
 Pipfile
 Pipfile.lock
-.style.yapf
