@@ -7,7 +7,7 @@ def test_add_by_primary_key():
 
     storage = Storage()
     john = User(
-        data={'id': 1},
+        data={"id": 1},
         storage=storage,
     )
 
@@ -22,9 +22,9 @@ def test_make_relation():
         id: int
 
     storage = Storage()
-    user = User(data={'id': 1}, storage=storage)
-    address1 = Address(data={'id': 1}, storage=storage)
-    address2 = Address(data={'id': 2}, storage=storage)
+    user = User(data={"id": 1}, storage=storage)
+    address1 = Address(data={"id": 1}, storage=storage)
+    address2 = Address(data={"id": 2}, storage=storage)
 
     storage.make_relation(
         from_=user,
@@ -37,11 +37,14 @@ def test_make_relation():
         relation_type=RelationType.CHILD,
     )
 
-    assert storage.get_one_related_entity(
-        user,
-        Address,
-        RelationType.RELATED,
-    ) == address1
+    assert (
+        storage.get_one_related_entity(
+            user,
+            Address,
+            RelationType.RELATED,
+        )
+        == address1
+    )
     assert storage.get_related_entities(
         user,
         Address,
@@ -57,10 +60,10 @@ def test_remove_relation():
         id: int
 
     storage = Storage()
-    user = User(data={'id': 1}, storage=storage)
-    address1 = Address(data={'id': 1}, storage=storage)
-    address2 = Address(data={'id': 2}, storage=storage)
-    address3 = Address(data={'id': 3}, storage=storage)
+    user = User(data={"id": 1}, storage=storage)
+    address1 = Address(data={"id": 1}, storage=storage)
+    address2 = Address(data={"id": 2}, storage=storage)
+    address3 = Address(data={"id": 3}, storage=storage)
 
     storage.make_relation(
         from_=user,
@@ -104,10 +107,10 @@ def test_remove_relations():
         id: int
 
     storage = Storage()
-    user = User(data={'id': 1}, storage=storage)
-    address1 = Address(data={'id': 1}, storage=storage)
-    address2 = Address(data={'id': 2}, storage=storage)
-    address3 = Address(data={'id': 3}, storage=storage)
+    user = User(data={"id": 1}, storage=storage)
+    address1 = Address(data={"id": 1}, storage=storage)
+    address2 = Address(data={"id": 2}, storage=storage)
+    address3 = Address(data={"id": 3}, storage=storage)
 
     storage.make_relation(
         from_=user,
@@ -136,11 +139,14 @@ def test_remove_relations():
 
     storage.remove_relations(user, Address, RelationType.RELATED)
 
-    assert storage.get_related_entities(
-        user,
-        Address,
-        RelationType.RELATED,
-    ) == []
+    assert (
+        storage.get_related_entities(
+            user,
+            Address,
+            RelationType.RELATED,
+        )
+        == []
+    )
     assert storage.get_related_entities(
         user,
         Address,

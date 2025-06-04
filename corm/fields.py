@@ -19,18 +19,18 @@ class KeyManager:
     def get(self, data):
         raise NotImplementedError
 
-    def prepare_to_set(self, entity: 'Entity') -> t.Any:
+    def prepare_to_set(self, entity: "Entity") -> t.Any:
         raise NotImplementedError
 
 
 class DefaultKeyManager:
-    def __init__(self, field: 'Field'):
+    def __init__(self, field: "Field"):
         self.field = field
 
     def get(self, data):
         return data
 
-    def prepare_to_set(self, entity: 'Entity') -> t.Any:
+    def prepare_to_set(self, entity: "Entity") -> t.Any:
         if entity:
             return getattr(entity, self.field.name)
 
@@ -38,8 +38,8 @@ class DefaultKeyManager:
 class RelationshipList(list):
     def __init__(
         self,
-        entity: 'Entity',
-        items: t.Iterable['Entity'],
+        entity: "Entity",
+        items: t.Iterable["Entity"],
         relation_type: t.Any = None,
     ):
         super().__init__(items)
@@ -61,29 +61,29 @@ class RelationshipList(list):
             relation_type=self.relation_type,
         )
 
-    def append(self, entity: 'Entity') -> None:
+    def append(self, entity: "Entity") -> None:
         super().append(entity)
 
         if self.relation_type:
             self.make_relation(entity)
 
-    def extend(self, entities: t.List['Entity']) -> None:
+    def extend(self, entities: t.List["Entity"]) -> None:
         for entity in entities:
             super().append(entity)
 
             if self.relation_type:
                 self.make_relation(entity)
 
-    def remove(self, entity: 'Entity') -> None:
+    def remove(self, entity: "Entity") -> None:
         super().remove(entity)
 
         if self.relation_type:
             self.remove_relation(entity)
 
-    def insert(self, index: int, entity: 'Entity') -> None:
+    def insert(self, index: int, entity: "Entity") -> None:
         raise NotImplementedError
 
-    def pop(self, index: int = ...) -> 'Entity':
+    def pop(self, index: int = ...) -> "Entity":
         raise NotImplementedError
 
     def clear(self) -> None:
@@ -97,8 +97,8 @@ class RelationshipList(list):
 class NestedList(RelationshipList):
     def __init__(
         self,
-        entity: 'Entity',
-        items: t.Iterable['Entity'],
+        entity: "Entity",
+        items: t.Iterable["Entity"],
         relation_type: t.Any = None,
     ):
         super().__init__(
@@ -160,20 +160,20 @@ class Field:
 
         self.default = default
 
-    def __get__(self, instance: 'Entity', owner) -> t.Any:
+    def __get__(self, instance: "Entity", owner) -> t.Any:
         if instance:
             return instance._data.get(self.origin)
         else:
             return self
 
-    def __set__(self, instance: 'Entity', value):
+    def __set__(self, instance: "Entity", value):
         if instance:
             if self.mode & AccessMode.SET:
                 instance._data[self.origin] = value
             else:
-                raise ValueError(f'Field \'{self.name}\' is read only')
+                raise ValueError(f"Field '{self.name}' is read only")
         else:
-            raise ValueError('Not able to change field on class')
+            raise ValueError("Not able to change field on class")
 
     def __set_name__(self, owner, name):
         self.name = name
@@ -185,7 +185,7 @@ class Field:
         if self.destination is None:
             self.destination = self.origin
 
-    def load(self, data: dict, instance: 'Entity') -> t.Any:
+    def load(self, data: dict, instance: "Entity") -> t.Any:
         data = data.get(self.origin, ...)
 
         if data is ...:
@@ -193,19 +193,19 @@ class Field:
                 return self.default()
             else:
                 raise ValueError(
-                    f'No value for field \'{self.name}\' of entity: {type(instance)}',
+                    f"No value for field '{self.name}' of entity: {type(instance)}",
                 )
 
         return data
 
     def __repr__(self):
-        return f'<Field[{self.owner.__name__}.{self.name}]>'
+        return f"<Field[{self.owner.__name__}.{self.name}]>"
 
 
 class Nested(Field):
     def __init__(
         self,
-        entity_type: t.Union[str, t.Type['Entity']],
+        entity_type: t.Union[str, t.Type["Entity"]],
         many: bool = False,
         back_relation: t.Any = False,
         mode: AccessMode = AccessMode.ALL,
@@ -228,25 +228,23 @@ class Nested(Field):
         self.back_relation = back_relation
 
     @property
-    def entity_type(self) -> t.Type['Entity']:
+    def entity_type(self) -> t.Type["Entity"]:
         if isinstance(self._entity_type, str):
             self._entity_type = registry.get(self._entity_type)
 
         return self._entity_type
 
-    def _load_one(self, data: t.Any, storage: 'Storage', parent: 'Entity'):
+    def _load_one(self, data: t.Any, storage: "Storage", parent: "Entity"):
         entity = self.entity_type(data=data, storage=storage)
 
         return entity
 
-    def load(self, data, instance: 'Entity') -> t.NoReturn:
+    def load(self, data, instance: "Entity") -> t.NoReturn:
         data = super().load(data, instance)
         storage = instance.storage
 
         if self.many:
-            items = (
-                self.entity_type(data=item, storage=storage) for item in data
-            )
+            items = (self.entity_type(data=item, storage=storage) for item in data)
             data = NestedList(
                 entity=instance,
                 items=items,
@@ -267,8 +265,8 @@ class Nested(Field):
 
     def __set__(
         self,
-        instance: 'Entity',
-        value: t.Union[t.List['Entity'], 'Entity'],
+        instance: "Entity",
+        value: t.Union[t.List["Entity"], "Entity"],
     ):
         if not instance:
             return super().__set__(instance, value)
@@ -278,7 +276,7 @@ class Nested(Field):
         if self.many:
             if not isinstance(value, list):
                 raise ValueError(
-                    f'Only list accepted for nested field with many set to True, got: {value}',
+                    f"Only list accepted for nested field with many set to True, got: {value}",
                 )
 
             old_value.clear()
@@ -309,7 +307,7 @@ class Nested(Field):
 class Relationship(Field):
     def __init__(
         self,
-        entity_type: t.Union[str, t.Type['Entity']],
+        entity_type: t.Union[str, t.Type["Entity"]],
         relation_type: t.Any = RelationType.RELATED,
         many: bool = False,
     ):
@@ -320,13 +318,13 @@ class Relationship(Field):
         self.many = many
 
     @property
-    def entity_type(self) -> t.Type['Entity']:
+    def entity_type(self) -> t.Type["Entity"]:
         if isinstance(self._entity_type, str):
             self._entity_type = registry.get(self._entity_type)
 
         return self._entity_type
 
-    def __get__(self, instance: 'Entity', owner):
+    def __get__(self, instance: "Entity", owner):
         if not instance:
             return super().__get__(instance, owner)
 
@@ -378,7 +376,7 @@ class Relationship(Field):
 class KeyNested(Field):
     def __init__(
         self,
-        related_entity_field: t.Union['Field', t.Any],
+        related_entity_field: t.Union["Field", t.Any],
         back_relation: t.Any = False,
         many: bool = False,
         mode: AccessMode = AccessMode.GET_SET_LOAD,
@@ -390,7 +388,7 @@ class KeyNested(Field):
     ):
         if not related_entity_field.pk:
             raise ValueError(
-                f'\'{related_entity_field}\' is not primary key field',
+                f"'{related_entity_field}' is not primary key field",
             )
 
         super().__init__(
@@ -411,7 +409,7 @@ class KeyNested(Field):
         self.back_relation = back_relation
         self.required = required
 
-    def _load_one(self, data: t.Any, storage: 'Storage', parent: 'Entity'):
+    def _load_one(self, data: t.Any, storage: "Storage", parent: "Entity"):
         if self.back_relation:
             storage.make_key_relation(
                 field_from=self.related_entity_field,
@@ -420,7 +418,7 @@ class KeyNested(Field):
                 to=parent,
             )
 
-    def load(self, data: dict, instance: 'Entity') -> t.Any:
+    def load(self, data: dict, instance: "Entity") -> t.Any:
         storage = instance.storage
         data = super().load(data, instance)
 
@@ -437,7 +435,7 @@ class KeyNested(Field):
 
         return data
 
-    def __get__(self, instance: 'Entity', owner):
+    def __get__(self, instance: "Entity", owner):
         data = super().__get__(instance, owner)
 
         if not instance or data is None:
@@ -457,8 +455,8 @@ class KeyNested(Field):
                 if not entity:
                     if self.required:
                         raise ValueError(
-                            f'Can\'t find {self.related_entity_field}={key} '
-                            f'in storage',
+                            f"Can't find {self.related_entity_field}={key} "
+                            f"in storage",
                         )
                     else:
                         continue
@@ -472,16 +470,15 @@ class KeyNested(Field):
 
             if not entity and self.required:
                 raise ValueError(
-                    f'Can\'t find {self.related_entity_field}={key} '
-                    f'in storage',
+                    f"Can't find {self.related_entity_field}={key} " f"in storage",
                 )
 
             return entity
 
     def __set__(
         self,
-        instance: 'Entity',
-        value: t.Union['Entity', t.List['Entity']],
+        instance: "Entity",
+        value: t.Union["Entity", t.List["Entity"]],
     ):
         if not instance:
             return super().__set__(instance, value)

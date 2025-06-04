@@ -4,7 +4,7 @@ from corm import Storage, Entity, Relationship, Nested
 class Address(Entity):
     street: str
     number: int
-    user: 'User' = Relationship(entity_type='User')
+    user: "User" = Relationship(entity_type="User")
 
 
 class User(Entity):
@@ -18,10 +18,10 @@ class User(Entity):
 storage = Storage()
 john = User(
     data={
-        'name': 'John',
-        'address': {
-            'street': 'First',
-            'number': 1,
+        "name": "John",
+        "address": {
+            "street": "First",
+            "number": 1,
         },
     },
     storage=storage,

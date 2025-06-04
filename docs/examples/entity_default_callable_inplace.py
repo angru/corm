@@ -8,4 +8,4 @@ class Foo(Entity):
 storage = Storage()
 foo = Foo(data={}, storage=storage)
 
-assert foo.inplace == list    # still callable, not new empty list
+assert foo.inplace is list  # still callable, not new empty list
