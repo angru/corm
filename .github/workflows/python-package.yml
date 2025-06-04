@@ -25,12 +25,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pytest-cov black ruff
+        pip install pytest pytest-cov pre-commit
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    - name: Lint with ruff and black
+    - name: Run pre-commit
       run: |
-        ruff .
-        black --check .
+        pre-commit run --all-files --show-diff-on-failure
     - name: Test with pytest
       run: |
         pytest --cov=./corm --cov-report=xml
