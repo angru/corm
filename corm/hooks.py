@@ -5,7 +5,7 @@ if t.TYPE_CHECKING:
 
 
 class Hook:
-    match_entities: t.List['Entity']
+    match_entities: t.List["Entity"]
 
-    def go(self, data, entity: 'Entity'):
+    def go(self, data, entity: "Entity"):
         raise NotImplementedError

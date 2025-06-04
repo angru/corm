@@ -17,8 +17,8 @@ def test_relationship():
         )
 
     storage = Storage()
-    holder = EntityHolder(data={'name': 'holder'}, storage=storage)
-    entity1 = SomeEntity(data={'name': 'entity1'}, storage=storage)
+    holder = EntityHolder(data={"name": "holder"}, storage=storage)
+    entity1 = SomeEntity(data={"name": "entity1"}, storage=storage)
 
     assert holder.entity is None
 
@@ -38,8 +38,8 @@ def test_relationship():
             relation_type=RelationType.CHILD,
         )
 
-    holder = ManyEntityHolder(data={'name': 'many holder'}, storage=storage)
-    entity2 = SomeEntity(data={'name': 'entity2'}, storage=storage)
+    holder = ManyEntityHolder(data={"name": "many holder"}, storage=storage)
+    entity2 = SomeEntity(data={"name": "entity2"}, storage=storage)
 
     storage.make_relation(
         from_=holder,
@@ -78,9 +78,9 @@ def test_assign_new_value_to_relationship():
         )
 
     storage = Storage()
-    holder = EntityHolder(data={'name': 'holder'}, storage=storage)
-    entity1 = SomeEntity(data={'name': 'entity1'}, storage=storage)
-    entity2 = SomeEntity(data={'name': 'entity2'}, storage=storage)
+    holder = EntityHolder(data={"name": "holder"}, storage=storage)
+    entity1 = SomeEntity(data={"name": "entity1"}, storage=storage)
+    entity2 = SomeEntity(data={"name": "entity2"}, storage=storage)
 
     holder.entity = entity1
 
@@ -103,14 +103,17 @@ def test_assign_new_value_to_relationship():
     holder.entity = None
 
     assert holder.entity is None
-    assert storage.get_related_entities(
-        holder,
-        SomeEntity,
-        RelationType.RELATED,
-    ) == []
+    assert (
+        storage.get_related_entities(
+            holder,
+            SomeEntity,
+            RelationType.RELATED,
+        )
+        == []
+    )
 
     many_holder = ManyEntityHolder(
-        data={'name': 'many holder'},
+        data={"name": "many holder"},
         storage=storage,
     )
     many_holder.entities = [entity1]
@@ -143,8 +146,11 @@ def test_assign_new_value_to_relationship():
     many_holder.entities = []
 
     assert many_holder.entities == []
-    assert storage.get_related_entities(
-        many_holder,
-        SomeEntity,
-        RelationType.RELATED,
-    ) == []
+    assert (
+        storage.get_related_entities(
+            many_holder,
+            SomeEntity,
+            RelationType.RELATED,
+        )
+        == []
+    )

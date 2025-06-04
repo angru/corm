@@ -16,8 +16,8 @@ class User(Entity):
     )
 
 
-address = Address({'street': 'First', 'number': 1}, storage)
-john = User({'name': 'John'}, storage)
+address = Address({"street": "First", "number": 1}, storage)
+john = User({"name": "John"}, storage)
 
 storage.make_relation(
     from_=john,

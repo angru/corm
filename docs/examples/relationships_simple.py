@@ -14,14 +14,14 @@ class User(Entity):
 storage = Storage()
 john = User(
     data={
-        'name': 'John',
-        'address': {
-            'street': 'First',
-            'number': 1,
+        "name": "John",
+        "address": {
+            "street": "First",
+            "number": 1,
         },
     },
     storage=storage,
 )
 
-assert john.address.street == 'First'
+assert john.address.street == "First"
 assert john.address.number == 1

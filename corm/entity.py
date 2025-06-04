@@ -17,7 +17,7 @@ class EntityMeta(type):
             if issubclass(base, Entity) and base != Entity:
                 fields.update(base.__fields__)
 
-        annotations = attrs.get('__annotations__') or {}
+        annotations = attrs.get("__annotations__") or {}
 
         if bases:
             for attr_name, attr_value in attrs.items():
@@ -27,20 +27,20 @@ class EntityMeta(type):
                     if attr_value.pk:
                         pk_fields.append(attr_value)
                 elif (
-                    not attr_name.startswith('_')
-                    and not isinstance(attr_value, property)    # noqa
-                    and not callable(attr_value)    # noqa
+                    not attr_name.startswith("_")
+                    and not isinstance(attr_value, property)  # noqa
+                    and not callable(attr_value)  # noqa
                 ):
                     fields[attr_name] = Field(default=attr_value)
 
             for attr_name, type_ in annotations.items():
-                if not attr_name.startswith('_') and attr_name not in fields:
+                if not attr_name.startswith("_") and attr_name not in fields:
                     fields[attr_name] = Field()
 
-        attrs['__fields__'] = fields
+        attrs["__fields__"] = fields
 
         if pk_fields:
-            attrs['__pk_fields__'] = pk_fields
+            attrs["__pk_fields__"] = pk_fields
 
         attrs.update(fields)
 
@@ -53,11 +53,11 @@ class EntityMeta(type):
 
 class Entity(metaclass=EntityMeta):
     _data: t.Dict[str, t.Any]
-    storage: 'Storage'
+    storage: "Storage"
     __pk_fields__: t.Optional[t.List[Field]] = None
     __fields__: t.Dict[str, Field]
 
-    def __init__(self, data: t.Any, storage: 'Storage'):
+    def __init__(self, data: t.Any, storage: "Storage"):
         self._data = data
         self.storage = storage
 
@@ -71,7 +71,7 @@ class Entity(metaclass=EntityMeta):
                 if value is not ...:
                     data[field.origin] = value
 
-    def dict(self, strip_none=False, hooks: t.Optional[t.List['Hook']] = None):
+    def dict(self, strip_none=False, hooks: t.Optional[t.List["Hook"]] = None):
         data = self._data
 
         for name, field in self.__fields__.items():
@@ -83,13 +83,11 @@ class Entity(metaclass=EntityMeta):
 
                 if isinstance(field, Nested):
                     if field.many:
-                        value = [
-                            item.dict(strip_none=strip_none) for item in value
-                        ]
+                        value = [item.dict(strip_none=strip_none) for item in value]
                     else:
                         value = value.dict(strip_none=strip_none)
 
-                data.pop(field.origin, None)    # TODO: temporary solution
+                data.pop(field.origin, None)  # TODO: temporary solution
 
                 data[field.destination] = value
 
