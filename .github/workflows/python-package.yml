@@ -24,7 +24,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        uv sync --only-group lint test --system
+        uv sync --only-group lint --only-group test --system
     - name: Run pre-commit
       run: |
         uv run pre-commit run --all-files --show-diff-on-failure
