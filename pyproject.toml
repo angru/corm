@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "wheel"]
+requires = ["setuptools>=80.9.0", "wheel>=0.45.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,9 +8,9 @@ version = "0.0.3"
 description = "Relationships between data structures"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {text = "MIT"}
+license-files = ["LICENSE"]
 authors = [
-    {name = "Andrey Shevchuk", email = "angru@list.ru"},
+    {name = "angru", email = "angru@list.ru"},
 ]
 classifiers = [
     "Programming Language :: Python",
@@ -23,7 +23,6 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: Unix",
     "Operating System :: POSIX :: Linux",
     "Environment :: Console",
@@ -32,16 +31,23 @@ classifiers = [
     "Topic :: Internet",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pre-commit",
-    "pytest",
-    "pytest-cov",
-    "mkdocs",
-    "mkdocs-material",
-    "markdown-include",
-    "build",
-]
-
 [tool.setuptools]
 packages = ["corm"]
+
+[dependency-groups]
+dev = [
+    "markdown-include>=0.8.1",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.14",
+    "setuptools>=80.9.0",
+    "wheel>=0.45.1",
+]
+lint = [
+    "black>=25.1.0",
+    "pre-commit>=4.2.0",
+    "ruff>=0.11.13",
+]
+test = [
+    "pytest>=8.4.0",
+    "pytest-cov>=6.1.1",
+]
