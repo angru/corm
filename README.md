@@ -16,6 +16,21 @@ See [documentation](https://angru.github.io/corm/) for more details.
 
 `pip install corm`
 
+## Development
+
+Install the development dependencies using [uv](https://github.com/astral-sh/uv) and the extras defined in `pyproject.toml`::
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    uv pip install -e .[dev]
+
+With the dependencies installed you can run `pre-commit` and `pytest` as usual.
+
+## Building
+
+To create distribution archives run::
+    uv run -m build
+
+This produces wheel and source packages under `dist/`.
+
 # Rationale
 
 * сложно помнить ключи словарей, если структура данных большая
