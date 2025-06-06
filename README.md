@@ -20,7 +20,7 @@ See [documentation](https://angru.github.io/corm/) for more details.
 
 Install the development dependencies using [uv](https://github.com/astral-sh/uv) and the extras defined in `pyproject.toml`::
     curl -LsSf https://astral.sh/uv/install.sh | sh
-    uv pip install -e .[dev]
+    uv pip install -e .[dev] --system  # omit --system if using a venv
 
 With the dependencies installed you can run `pre-commit` and `pytest` as usual.
 
