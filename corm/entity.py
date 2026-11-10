@@ -1,3 +1,4 @@
+import sys
 import typing as t
 
 from corm import registry, constants
@@ -5,7 +6,22 @@ from corm.fields import Field, Nested
 
 if t.TYPE_CHECKING:
     from corm.storage import Storage
-    from corm.hooks import Hook
+
+if sys.version_info >= (3, 14):
+    import annotationlib
+
+    def _namespace_annotations(attrs):
+        annotate = annotationlib.get_annotate_from_class_namespace(attrs)
+        if annotate is None:
+            return attrs.get("__annotations__") or {}
+        return annotationlib.call_annotate_function(
+            annotate, annotationlib.Format.FORWARDREF
+        )
+
+else:
+
+    def _namespace_annotations(attrs):
+        return attrs.get("__annotations__") or {}
 
 
 class EntityMeta(type):
@@ -17,7 +33,7 @@ class EntityMeta(type):
             if issubclass(base, Entity) and base != Entity:
                 fields.update(base.__fields__)
 
-        annotations = attrs.get("__annotations__") or {}
+        annotations = _namespace_annotations(attrs)
 
         if bases:
             for attr_name, attr_value in attrs.items():
@@ -28,7 +44,9 @@ class EntityMeta(type):
                         pk_fields.append(attr_value)
                 elif (
                     not attr_name.startswith("_")
-                    and not isinstance(attr_value, property)  # noqa
+                    and not isinstance(
+                        attr_value, (property, classmethod, staticmethod)
+                    )
                     and not callable(attr_value)  # noqa
                 ):
                     fields[attr_name] = Field(default=attr_value)
@@ -61,9 +79,6 @@ class Entity(metaclass=EntityMeta):
         self._data = data
         self.storage = storage
 
-        if self.__pk_fields__:
-            storage.add(self)
-
         for name, field in self.__fields__.items():
             if field.mode & constants.AccessMode.LOAD:
                 value = field.load(data, self)
@@ -71,23 +86,25 @@ class Entity(metaclass=EntityMeta):
                 if value is not ...:
                     data[field.origin] = value
 
-    def dict(self, strip_none=False, hooks: t.Optional[t.List["Hook"]] = None):
-        data = self._data
+        if self.__pk_fields__:
+            storage.add(self)
+
+    def dict(self, strip_none=False):
+        data = self._data.copy()
 
         for name, field in self.__fields__.items():
             if field.mode & constants.AccessMode.DUMP:
                 value = getattr(self, name)
+                data.pop(field.origin, None)
 
                 if strip_none and value is None:
                     continue
 
-                if isinstance(field, Nested):
+                if isinstance(field, Nested) and value is not None:
                     if field.many:
                         value = [item.dict(strip_none=strip_none) for item in value]
                     else:
                         value = value.dict(strip_none=strip_none)
-
-                data.pop(field.origin, None)  # TODO: temporary solution
 
                 data[field.destination] = value
 

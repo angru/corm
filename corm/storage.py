@@ -102,23 +102,3 @@ class Storage:
         relation_type: t.Any,
     ) -> t.NoReturn:
         self._relations[entity][related_entity_type, relation_type].clear()
-
-    def merge(self, entity: "Entity"):
-        raise NotImplementedError
-
-    def select(self, entity_type: t.Type["Entity"]) -> "Query":
-        raise NotImplementedError
-
-
-class Query:
-    def filter(self, *args, **kwargs) -> "Query":
-        raise NotImplementedError
-
-    def first(self) -> "Entity":
-        raise NotImplementedError
-
-    def one(self) -> "Entity":
-        raise NotImplementedError
-
-    def all(self) -> t.List["Entity"]:
-        raise NotImplementedError

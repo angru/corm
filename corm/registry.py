@@ -2,22 +2,27 @@ _registry = {}
 
 
 def add(entity_class, name: str = None):
-    if name and name in _registry:
-        raise ValueError(
-            f"Entity class with name {name} already in registry. "
-            f"You probably should use full path to entity class "
-            f"e.g. {entity_class.__module__}.{entity_class.__name__}",
-        )
-
     if name is None:
-        add(entity_class, entity_class.__name__)
-        add(entity_class, f"{entity_class.__module__}.{entity_class.__name__}")
-    else:
-        _registry[name] = entity_class
+        name = f"{entity_class.__module__}.{entity_class.__qualname__}"
+    _registry[name] = entity_class
 
 
 def get(name: str):
-    return _registry[name]
+    if name in _registry:
+        return _registry[name]
+
+    matches = {
+        full_name: entity_class
+        for full_name, entity_class in _registry.items()
+        if entity_class.__name__ == name
+    }
+    if len(matches) == 1:
+        return next(iter(matches.values()))
+    if matches:
+        raise ValueError(
+            f"Ambiguous entity name {name!r}; use one of: {', '.join(sorted(matches))}"
+        )
+    raise KeyError(f"Unknown entity {name!r}")
 
 
 def clear():
