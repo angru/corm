@@ -28,7 +28,7 @@ Also it works with `many=True`
 ```
 
 !!! Note
-    As you can see it changes both user and address, but keep in mind it is possible to change relationship through `Nested` but not through `Relationship`. In this example `address.user = user` will raise `ValueError`
+    As you can see, changing the relationship through `Nested` updates both user and address.
 
 ## Manually related entities
 

@@ -15,14 +15,17 @@ class Storage:
         self._entities: t.Dict[t.Tuple["Field", t.Any], "Entity"] = {}
         self._relations = defaultdict(functools.partial(defaultdict, list))
 
+    def _check_primary_key(self, field: "Field", value: t.Any) -> EntityRef:
+        key = EntityRef(field, value)
+        if key in self._entities:
+            raise ValueError(f"{field}={value} already in storage")
+        return key
+
     def add(self, entity: "Entity"):
         if entity.__pk_fields__:
             for field in entity.__pk_fields__:
                 value = getattr(entity, field.name)
-                key = EntityRef(field, value)
-
-                if key in self._entities:
-                    raise ValueError(f"{field}={value} already in storage")
+                key = self._check_primary_key(field, value)
 
                 # resolve reference relations
                 relations = self._relations.pop(key, None)
@@ -102,23 +105,3 @@ class Storage:
         relation_type: t.Any,
     ) -> t.NoReturn:
         self._relations[entity][related_entity_type, relation_type].clear()
-
-    def merge(self, entity: "Entity"):
-        raise NotImplementedError
-
-    def select(self, entity_type: t.Type["Entity"]) -> "Query":
-        raise NotImplementedError
-
-
-class Query:
-    def filter(self, *args, **kwargs) -> "Query":
-        raise NotImplementedError
-
-    def first(self) -> "Entity":
-        raise NotImplementedError
-
-    def one(self) -> "Entity":
-        raise NotImplementedError
-
-    def all(self) -> t.List["Entity"]:
-        raise NotImplementedError

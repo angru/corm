@@ -130,10 +130,6 @@ class NestedList(RelationshipList):
         )
 
 
-class KeyRelationshipList(list):
-    """TODO"""
-
-
 class Field:
     name: str
     pk: bool
@@ -251,7 +247,7 @@ class Nested(Field):
                 relation_type=self.back_relation,
             )
 
-        else:
+        elif data is not None:
             data = self.entity_type(data=data, storage=storage)
 
             if self.back_relation:
@@ -279,6 +275,7 @@ class Nested(Field):
                     f"Only list accepted for nested field with many set to True, got: {value}",
                 )
 
+            value = list(value)
             old_value.clear()
 
             value = NestedList(
@@ -287,14 +284,14 @@ class Nested(Field):
                 relation_type=self.back_relation,
             )
         else:
-            if self.back_relation:
+            if self.back_relation and old_value is not None:
                 instance.storage.remove_relation(
                     from_=old_value,
                     to_=instance,
                     relation_type=self.back_relation,
                 )
 
-            if value:
+            if self.back_relation and value is not None:
                 instance.storage.make_relation(
                     from_=value,
                     to_=instance,

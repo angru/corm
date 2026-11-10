@@ -16,6 +16,6 @@ class EntityHolder(Entity):
 
 storage = Storage()
 entity = SomeEntity({"id": 123, "name": "entity"}, storage=storage)
-holder = EntityHolder({"entity_id": 123}, storage=storage)
+holder = EntityHolder({"entity_id": 123, "name": "holder"}, storage=storage)
 
 assert holder.entity == entity
