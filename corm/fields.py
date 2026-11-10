@@ -452,8 +452,7 @@ class KeyNested(Field):
                 if not entity:
                     if self.required:
                         raise ValueError(
-                            f"Can't find {self.related_entity_field}={key} "
-                            f"in storage",
+                            f"Can't find {self.related_entity_field}={key} in storage",
                         )
                     else:
                         continue
@@ -467,7 +466,7 @@ class KeyNested(Field):
 
             if not entity and self.required:
                 raise ValueError(
-                    f"Can't find {self.related_entity_field}={key} " f"in storage",
+                    f"Can't find {self.related_entity_field}={key} in storage",
                 )
 
             return entity
