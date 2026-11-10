@@ -15,14 +15,17 @@ class Storage:
         self._entities: t.Dict[t.Tuple["Field", t.Any], "Entity"] = {}
         self._relations = defaultdict(functools.partial(defaultdict, list))
 
+    def _check_primary_key(self, field: "Field", value: t.Any) -> EntityRef:
+        key = EntityRef(field, value)
+        if key in self._entities:
+            raise ValueError(f"{field}={value} already in storage")
+        return key
+
     def add(self, entity: "Entity"):
         if entity.__pk_fields__:
             for field in entity.__pk_fields__:
                 value = getattr(entity, field.name)
-                key = EntityRef(field, value)
-
-                if key in self._entities:
-                    raise ValueError(f"{field}={value} already in storage")
+                key = self._check_primary_key(field, value)
 
                 # resolve reference relations
                 relations = self._relations.pop(key, None)

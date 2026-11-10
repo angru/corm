@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-from corm import Entity, Field, Nested, Relationship, Storage, registry
+from corm import Entity, Field, KeyNested, Nested, Relationship, Storage, registry
 
 
 def test_annotation_only_forward_reference():
@@ -243,6 +243,62 @@ def test_primary_key_default_used_for_storage():
     assert user.id == 42
     assert storage.get(User.id, 42) is user
     assert storage.get(User.id, None) is None
+
+
+@pytest.mark.parametrize("use_default", [False, True])
+def test_duplicate_primary_key_does_not_store_nested_child(use_default):
+    class Address(Entity):
+        id = Field(pk=True)
+
+    class User(Entity):
+        address = Nested(entity_type=Address)
+        id = Field(pk=True, origin="user_id", default=1)
+
+    storage = Storage()
+    original = User({"user_id": 1, "address": {"id": 5}}, storage)
+    duplicate_data = {"address": {"id": 6}}
+    if not use_default:
+        duplicate_data["user_id"] = 1
+
+    with pytest.raises(ValueError, match="User.id.*=1 already in storage"):
+        User(duplicate_data, storage)
+
+    assert storage.get(User.id, 1) is original
+    assert storage.get(Address.id, 6) is None
+    retried = User({"user_id": 2, "address": {"id": 6}}, storage)
+    assert storage.get(Address.id, 6) is retried.address
+
+
+@pytest.mark.parametrize("target_exists", [True, False])
+def test_duplicate_primary_key_does_not_add_key_nested_relation(target_exists):
+    default_calls = []
+
+    def default_id():
+        default_calls.append(10)
+        return 10
+
+    class Target(Entity):
+        id = Field(pk=True)
+        holders = Relationship(entity_type="Holder", many=True)
+
+    class Holder(Entity):
+        target = KeyNested(Target.id, back_relation=True)
+        id = Field(pk=True, default=default_id)
+
+    storage = Storage()
+    if target_exists:
+        target = Target({"id": 1}, storage)
+    original = Holder({"target": 1}, storage)
+
+    with pytest.raises(ValueError, match="Holder.id.*=10 already in storage"):
+        Holder({"target": 1}, storage)
+
+    if not target_exists:
+        target = Target({"id": 1}, storage)
+    assert target.holders == [original]
+    assert original.target is target
+    assert storage.get(Holder.id, 10) is original
+    assert default_calls == [10, 10]
 
 
 def test_annotation_only_field_with_future_annotations():

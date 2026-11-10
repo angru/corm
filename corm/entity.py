@@ -64,6 +64,13 @@ class EntityMeta(type):
 
         klass = super().__new__(mcs, name, bases, attrs)
 
+        if klass.__pk_fields__:
+            pk_names = {field.name for field in klass.__pk_fields__}
+            klass._field_load_groups = (
+                tuple(field for name, field in fields.items() if name in pk_names),
+                tuple(field for name, field in fields.items() if name not in pk_names),
+            )
+
         registry.add(klass)
 
         return klass
@@ -74,20 +81,33 @@ class Entity(metaclass=EntityMeta):
     storage: "Storage"
     __pk_fields__: t.Optional[t.List[Field]] = None
     __fields__: t.Dict[str, Field]
+    _field_load_groups: t.Tuple[t.Tuple[Field, ...], t.Tuple[Field, ...]]
 
     def __init__(self, data: t.Any, storage: "Storage"):
         self._data = data
         self.storage = storage
 
-        for name, field in self.__fields__.items():
+        pk_fields = self.__pk_fields__
+        if pk_fields:
+            # Reject duplicate keys before other fields can add entities or relations.
+            key_fields, remaining_fields = self._field_load_groups
+            self._load_fields(key_fields, data)
+            for field in pk_fields:
+                storage._check_primary_key(field, getattr(self, field.name))
+        else:
+            remaining_fields = self.__fields__.values()
+
+        self._load_fields(remaining_fields, data)
+        if pk_fields:
+            storage.add(self)
+
+    def _load_fields(self, fields: t.Iterable[Field], data: t.Any):
+        for field in fields:
             if field.mode & constants.AccessMode.LOAD:
                 value = field.load(data, self)
 
                 if value is not ...:
                     data[field.origin] = value
-
-        if self.__pk_fields__:
-            storage.add(self)
 
     def dict(self, strip_none=False):
         data = self._data.copy()
