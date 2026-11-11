@@ -1,4 +1,4 @@
-from corm import Storage, Entity, Relationship, RelationType
+from corm import Entity, Relationship, RelationType, Storage
 
 storage = Storage()
 

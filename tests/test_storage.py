@@ -1,4 +1,4 @@
-from corm import Entity, Field, Storage, RelationType
+from corm import Entity, Field, RelationType, Storage
 
 
 def test_add_by_primary_key():

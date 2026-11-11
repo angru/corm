@@ -16,7 +16,9 @@ nav:
   - FAQ: faq.md
 
 markdown_extensions:
-  - codehilite
+  - pymdownx.highlight
+  - pymdownx.superfences
   - admonition
-  - markdown_include.include:
-        base_path: docs
+  - pymdownx.snippets:
+      base_path: [docs]
+      check_paths: true

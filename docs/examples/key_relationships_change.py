@@ -1,4 +1,4 @@
-from corm import Relationship, Entity, Field, KeyNested, Storage
+from corm import Entity, Field, KeyNested, Relationship, Storage
 
 
 class SomeEntity(Entity):

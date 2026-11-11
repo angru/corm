@@ -1,6 +1,6 @@
 import pytest
 
-from corm import Entity, Field, Storage, AccessMode
+from corm import AccessMode, Entity, Field, Storage
 
 
 def test_base_entity():

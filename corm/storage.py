@@ -1,7 +1,6 @@
 import collections
 import functools
 import typing as t
-
 from collections import defaultdict
 
 if t.TYPE_CHECKING:
@@ -12,7 +11,7 @@ EntityRef = collections.namedtuple("EntityRef", ["field", "key"])
 
 class Storage:
     def __init__(self):
-        self._entities: t.Dict[t.Tuple["Field", t.Any], "Entity"] = {}
+        self._entities: dict[tuple[Field, t.Any], Entity] = {}
         self._relations = defaultdict(functools.partial(defaultdict, list))
 
     def _check_primary_key(self, field: "Field", value: t.Any) -> EntityRef:
@@ -56,8 +55,8 @@ class Storage:
 
     def make_relation(
         self,
-        from_: t.Union["Entity", "EntityRef"],
-        to_: t.Union["Entity", "EntityRef"],
+        from_: "Entity | EntityRef",
+        to_: "Entity | EntityRef",
         relation_type: t.Any,
     ):
         # TODO: probably weakref will be better
@@ -74,17 +73,17 @@ class Storage:
     def get_related_entities(
         self,
         entity: ["Entity", "EntityRef"],
-        related_entity_type: t.Type["Entity"],
+        related_entity_type: type["Entity"],
         relation_type: t.Any,
-    ) -> t.List["Entity"]:
+    ) -> list["Entity"]:
         return self._relations[entity][related_entity_type, relation_type]
 
     def get_one_related_entity(
         self,
-        entity: t.Union["Entity", "EntityRef"],
-        related_entity_type: t.Type["Entity"],
+        entity: "Entity | EntityRef",
+        related_entity_type: type["Entity"],
         relation_type: t.Any,
-    ) -> t.Optional["Entity"]:
+    ) -> "Entity | None":
         entities = self._relations[entity][related_entity_type, relation_type]
 
         if entities:
@@ -92,16 +91,16 @@ class Storage:
 
     def remove_relation(
         self,
-        from_: t.Union["Entity", "EntityRef"],
-        to_: t.Union["Entity", "EntityRef"],
+        from_: "Entity | EntityRef",
+        to_: "Entity | EntityRef",
         relation_type: t.Any,
     ) -> t.NoReturn:
         self._relations[from_][type(to_), relation_type].remove(to_)
 
     def remove_relations(
         self,
-        entity: t.Union["Entity", "EntityRef"],
-        related_entity_type: t.Type["Entity"],
+        entity: "Entity | EntityRef",
+        related_entity_type: type["Entity"],
         relation_type: t.Any,
     ) -> t.NoReturn:
         self._relations[entity][related_entity_type, relation_type].clear()

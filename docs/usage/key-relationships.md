@@ -1,12 +1,12 @@
 ## Simple case
 ```python
-{!examples/key_relationships_simple.py!}
+--8<-- "examples/key_relationships_simple.py"
 ```
 
 ## Bidirectional key relationships
 
 ```python
-{!examples/key_relationships_bidirectional.py!}
+--8<-- "examples/key_relationships_bidirectional.py"
 ```
 
 
@@ -14,5 +14,5 @@
 As with `Nested` it is possible to change related data
 
 ```python
-{!examples/key_relationships_change.py!}
+--8<-- "examples/key_relationships_change.py"
 ```

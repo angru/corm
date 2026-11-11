@@ -18,13 +18,14 @@ See [documentation](https://angru.github.io/corm/) for more details.
 
 ## Development
 
-Install the development dependencies using [uv](https://github.com/astral-sh/uv) and the extras defined in `pyproject.toml`:
+Install the `docs`, `lint`, and `test` dependency groups using [uv](https://github.com/astral-sh/uv).
 ```bash
-uv venv --python 3.9
-uv sync --all-groups
+uv venv --python 3.11
+uv sync --locked --all-groups
 ```
 
-With the dependencies installed you can run `pre-commit` and `pytest` as usual.
+Run `uv run pre-commit run --all-files` for lint and formatting checks,
+`uv run pytest` for tests, and `uv run mkdocs build --strict` to build the docs.
 
 ## Building
 

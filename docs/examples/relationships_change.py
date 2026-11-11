@@ -1,4 +1,4 @@
-from corm import Entity, Relationship, Nested, Storage
+from corm import Entity, Nested, Relationship, Storage
 
 
 class Address(Entity):
