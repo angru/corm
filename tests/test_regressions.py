@@ -2,7 +2,17 @@ import sys
 
 import pytest
 
-from corm import Entity, Field, KeyNested, Nested, Relationship, Storage, registry
+from corm import (
+    CormError,
+    Entity,
+    Field,
+    KeyNested,
+    Nested,
+    RegistryError,
+    Relationship,
+    Storage,
+    registry,
+)
 
 
 def test_annotation_only_forward_reference():
@@ -92,8 +102,10 @@ def test_registry_short_name_ambiguity_and_full_names():
     second = type("User", (Entity,), {"__module__": "pkg.second"})
     assert registry.get("pkg.first.User") is first
     assert registry.get("pkg.second.User") is second
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(RegistryError) as exc:
         registry.get("User")
+    assert isinstance(exc.value, CormError)
+    assert isinstance(exc.value, LookupError)
     assert "pkg.first.User" in str(exc.value)
     assert "pkg.second.User" in str(exc.value)
 
@@ -109,13 +121,15 @@ def test_registry_uses_qualnames():
 
     for user in (First.User, Second.User):
         assert registry.get(f"{user.__module__}.{user.__qualname__}") is user
-    with pytest.raises(ValueError):
+    with pytest.raises(RegistryError):
         registry.get("User")
 
 
 def test_registry_unknown_name():
-    with pytest.raises(KeyError, match=r"Unknown entity.*MissingUser"):
+    with pytest.raises(RegistryError, match=r"Unknown entity.*MissingUser") as exc:
         registry.get("MissingUser")
+    assert isinstance(exc.value, CormError)
+    assert isinstance(exc.value, LookupError)
 
 
 def test_entity_classmethod_and_staticmethod():

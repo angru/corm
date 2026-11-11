@@ -3,6 +3,39 @@ import pytest
 from corm import AccessMode, Entity, Field, Storage
 
 
+def test_access_mode_values():
+    assert {mode.name: mode.value for mode in AccessMode.__members__.values()} == {
+        "GET": 1,
+        "SET": 2,
+        "LOAD": 4,
+        "DUMP": 8,
+        "GET_LOAD": 5,
+        "GET_DUMP": 9,
+        "SET_LOAD": 6,
+        "GET_LOAD_DUMP": 13,
+        "SET_LOAD_DUMP": 14,
+        "GET_SET_LOAD": 7,
+        "ALL": 15,
+    }
+
+
+def test_get_set_mode_skips_loading_and_dumping():
+    mode = AccessMode.GET | AccessMode.SET
+    assert isinstance(mode, AccessMode)
+
+    class User(Entity):
+        note: str | None = Field(
+            mode=mode, default="default", origin="raw_note", destination="saved_note"
+        )
+
+    user = User({"unrelated": True}, Storage())
+    assert User.note.mode is mode
+    assert user.note is None
+    user.note = "temporary"
+    assert user.note == "temporary"
+    assert user.dict() == {"unrelated": True}
+
+
 def test_base_entity():
     class User(Entity):
         id: int

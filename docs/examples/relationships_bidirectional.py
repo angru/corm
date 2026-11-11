@@ -24,4 +24,5 @@ john = User(
     storage=storage,
 )
 
+assert john.address is not None
 assert john.address.user == john

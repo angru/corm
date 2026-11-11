@@ -76,14 +76,15 @@ class EntityMeta(type):
 
         klass = super().__new__(mcs, name, bases, attrs)
 
-        if klass.__pk_fields__:
-            pk_names = {field.name for field in klass.__pk_fields__}
-            klass._field_load_groups = (
+        entity_class = t.cast("type[Entity]", klass)
+        if entity_class.__pk_fields__:
+            pk_names = {field.name for field in entity_class.__pk_fields__}
+            entity_class._field_load_groups = (
                 tuple(field for name, field in fields.items() if name in pk_names),
                 tuple(field for name, field in fields.items() if name not in pk_names),
             )
 
-        registry.add(klass)
+        registry.add(entity_class)
 
         return klass
 
@@ -96,14 +97,15 @@ class Entity(metaclass=EntityMeta):
     _field_load_groups: tuple[tuple[Field, ...], tuple[Field, ...]]
     _paired_fields: tuple[_OwningRelationField, ...]
 
-    def __init__(self, data: t.Any, storage: "Storage"):
+    def __init__(self, data: dict[str, t.Any], storage: "Storage") -> None:
         self._data = data
         self.storage = storage
 
-        for field in self._paired_fields:
-            field._resolve_pair()
+        for paired_field in self._paired_fields:
+            paired_field._resolve_pair()
 
         pk_fields = self.__pk_fields__
+        remaining_fields: t.Iterable[Field]
         if pk_fields:
             # Reject duplicate keys before other fields can add entities or relations.
             key_fields, remaining_fields = self._field_load_groups
@@ -117,21 +119,28 @@ class Entity(metaclass=EntityMeta):
         if pk_fields:
             storage.add(self)
 
-    def _load_fields(self, fields: t.Iterable[Field], data: t.Any):
+    def _load_fields(self, fields: t.Iterable[Field], data: dict[str, t.Any]) -> None:
         for field in fields:
             if field.mode & constants.AccessMode.LOAD:
                 value = field.load(data, self)
 
                 if value is not ...:
-                    data[field.origin] = value
+                    data[t.cast(str, field.origin)] = value
 
-    def dict(self, strip_none=False):
+    def dict(self, strip_none: bool = False) -> dict[str, t.Any]:
         data = self._data.copy()
+
+        # Writable fields without a load or dump representation are transient.
+        for field in self.__fields__.values():
+            if field.mode & constants.AccessMode.SET and not field.mode & (
+                constants.AccessMode.LOAD | constants.AccessMode.DUMP
+            ):
+                data.pop(t.cast(str, field.origin), None)
 
         for name, field in self.__fields__.items():
             if field.mode & constants.AccessMode.DUMP:
                 value = getattr(self, name)
-                data.pop(field.origin, None)
+                data.pop(t.cast(str, field.origin), None)
 
                 if strip_none and value is None:
                     continue
@@ -142,6 +151,6 @@ class Entity(metaclass=EntityMeta):
                     else:
                         value = value.dict(strip_none=strip_none)
 
-                data[field.destination] = value
+                data[t.cast(str, field.destination)] = value
 
         return data

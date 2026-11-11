@@ -1,13 +1,20 @@
-_registry = {}
+from typing import TYPE_CHECKING
+
+from corm.exceptions import RegistryError
+
+if TYPE_CHECKING:
+    from corm.entity import Entity
+
+_registry: dict[str, type["Entity"]] = {}
 
 
-def add(entity_class, name: str | None = None):
+def add(entity_class: type["Entity"], name: str | None = None) -> None:
     if name is None:
         name = f"{entity_class.__module__}.{entity_class.__qualname__}"
     _registry[name] = entity_class
 
 
-def get(name: str):
+def get(name: str) -> type["Entity"]:
     if name in _registry:
         return _registry[name]
 
@@ -19,11 +26,11 @@ def get(name: str):
     if len(matches) == 1:
         return next(iter(matches.values()))
     if matches:
-        raise ValueError(
+        raise RegistryError(
             f"Ambiguous entity name {name!r}; use one of: {', '.join(sorted(matches))}"
         )
-    raise KeyError(f"Unknown entity {name!r}")
+    raise RegistryError(f"Unknown entity {name!r}")
 
 
-def clear():
+def clear() -> None:
     _registry.clear()

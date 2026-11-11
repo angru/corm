@@ -1,10 +1,19 @@
 import ast
 import typing as t
 import warnings
-from types import NoneType, UnionType
+from collections.abc import Hashable, Iterable
+from types import EllipsisType, NoneType, UnionType
 
 from corm import registry
 from corm.constants import AccessMode, RelationType
+from corm.exceptions import (
+    ConfigurationError,
+    EntityNotFoundError,
+    MissingFieldError,
+    ReadOnlyFieldError,
+    RegistryError,
+    RelationError,
+)
 
 if t.TYPE_CHECKING:
     from corm.entity import Entity
@@ -88,74 +97,108 @@ def proxy_factory(value: t.Any) -> t.Callable[[], t.Any]:
 
 
 class KeyManager:
-    def get(self, data):
+    def get(self, data: t.Any) -> Hashable:
         raise NotImplementedError
 
-    def prepare_to_set(self, entity: "Entity") -> t.Any:
+    def prepare_to_set(self, entity: "Entity | None") -> t.Any:
         raise NotImplementedError
 
 
-class DefaultKeyManager:
-    def __init__(self, field: "Field"):
+class DefaultKeyManager(KeyManager):
+    def __init__(self, field: "Field") -> None:
         self.field = field
 
-    def get(self, data):
+    def get(self, data: t.Any) -> Hashable:
         return data
 
-    def prepare_to_set(self, entity: "Entity") -> t.Any:
+    def prepare_to_set(self, entity: "Entity | None") -> t.Any:
         if entity:
             return getattr(entity, self.field.name)
 
 
-class RelationshipList(list):
+_RelationParams = t.ParamSpec("_RelationParams")
+
+
+def _apply_relation(
+    field: "Field | None",
+    operation: t.Callable[_RelationParams, None],
+    /,
+    *args: _RelationParams.args,
+    **kwargs: _RelationParams.kwargs,
+) -> None:
+    try:
+        operation(*args, **kwargs)
+    except RelationError as error:
+        if field is None:
+            raise
+        raise RelationError(f"{field}: {error}") from error
+
+
+class RelationshipList(list["Entity"]):
     def __init__(
         self,
         entity: "Entity",
-        items: t.Iterable["Entity"],
-        relation_type: t.Any = None,
-    ):
+        items: Iterable["Entity"],
+        relation_type: Hashable = None,
+        *,
+        field: "Field | None" = None,
+    ) -> None:
         super().__init__(items)
 
         self.entity = entity
         self.relation_type = relation_type
+        self._field = field
 
-    def make_relation(self, entity):
-        return self.entity.storage.make_relation(
-            from_=self.entity,
-            to_=entity,
+    def _relation_endpoints(self, entity: "Entity") -> "tuple[Entity, Entity]":
+        return self.entity, entity
+
+    def make_relation(self, entity: "Entity") -> None:
+        source, target = self._relation_endpoints(entity)
+        _apply_relation(
+            self._field,
+            self.entity.storage.make_relation,
+            from_=source,
+            to_=target,
             relation_type=self.relation_type,
         )
 
-    def remove_relation(self, entity):
-        self.entity.storage.remove_relation(
-            from_=self.entity,
-            to_=entity,
+    def remove_relation(self, entity: "Entity") -> None:
+        source, target = self._relation_endpoints(entity)
+        _apply_relation(
+            self._field,
+            self.entity.storage.remove_relation,
+            from_=source,
+            to_=target,
             relation_type=self.relation_type,
         )
 
     def append(self, entity: "Entity") -> None:
-        super().append(entity)
-
         if self.relation_type:
             self.make_relation(entity)
+        super().append(entity)
 
-    def extend(self, entities: list["Entity"]) -> None:
+    def extend(self, entities: Iterable["Entity"]) -> None:
         for entity in entities:
-            super().append(entity)
-
-            if self.relation_type:
-                self.make_relation(entity)
+            self.append(entity)
 
     def remove(self, entity: "Entity") -> None:
-        super().remove(entity)
+        try:
+            index = self.index(entity)
+        except ValueError as error:
+            relation = self._field or f"Relation type {self.relation_type!r}"
+            raise RelationError(
+                f"{relation} does not exist between "
+                f"{type(self.entity).__name__} and {type(entity).__name__}"
+            ) from error
 
         if self.relation_type:
-            self.remove_relation(entity)
+            self.remove_relation(self[index])
+        super().__delitem__(index)
 
-    def insert(self, index: int, entity: "Entity") -> None:
+    def insert(self, index: t.SupportsIndex, entity: "Entity") -> None:
         raise NotImplementedError
 
-    def pop(self, index: int = ...) -> "Entity":
+    def pop(self, index: t.SupportsIndex = -1) -> "Entity":
         raise NotImplementedError
 
     def clear(self) -> None:
@@ -170,39 +213,27 @@ class NestedList(RelationshipList):
     def __init__(
         self,
         entity: "Entity",
-        items: t.Iterable["Entity"],
-        relation_type: t.Any = None,
-    ):
+        items: Iterable["Entity"],
+        relation_type: Hashable = None,
+        *,
+        field: "Field | None" = None,
+    ) -> None:
         super().__init__(
             entity=entity,
             items=items,
             relation_type=relation_type,
+            field=field,
         )
 
         if relation_type:
             for item in self:
-                entity.storage.make_relation(
-                    from_=item,
-                    to_=entity,
-                    relation_type=relation_type,
-                )
+                self.make_relation(item)
 
-    def make_relation(self, entity):
-        return self.entity.storage.make_relation(
-            from_=entity,
-            to_=self.entity,
-            relation_type=self.relation_type,
-        )
-
-    def remove_relation(self, entity):
-        self.entity.storage.remove_relation(
-            from_=entity,
-            to_=self.entity,
-            relation_type=self.relation_type,
-        )
+    def _relation_endpoints(self, entity: "Entity") -> "tuple[Entity, Entity]":
+        return entity, self.entity
 
 
-class _PairedList(list):
+class _PairedList(list["Entity"]):
     def __init__(self, items, field, entity):
         super().__init__(items)
         self._field = field
@@ -211,7 +242,12 @@ class _PairedList(list):
     def _edit(self, operation, *args, **kwargs):
         field, entity = self._field, self.entity
         items = list(field._read_paired_list(entity))
-        result = operation(items, *args, **kwargs)
+        try:
+            result = operation(items, *args, **kwargs)
+        except ValueError as error:
+            if operation is list.remove:
+                raise RelationError(f"Relation does not exist for {field}") from error
+            raise
         field._write_paired_list(entity, items)
         super().__setitem__(slice(None), field._read_paired_list(entity))
         return result
@@ -243,11 +279,12 @@ class _PairedList(list):
     def __delitem__(self, index):
         self._edit(list.__delitem__, index)
 
-    def __iadd__(self, entities):
+    # list.__add__ can widen its element type. In-place edits keep Entity items.
+    def __iadd__(self, entities: Iterable["Entity"], /) -> t.Self:  # type: ignore[override, misc]
         self._edit(list.__iadd__, entities)
         return self
 
-    def __imul__(self, count):
+    def __imul__(self, count: t.SupportsIndex, /) -> t.Self:
         self._edit(list.__imul__, count)
         return self
 
@@ -260,8 +297,7 @@ class _PairedList(list):
 
 class _ReverseList(_PairedList, RelationshipList):
     def __init__(self, items, field, entity):
-        RelationshipList.__init__(self, entity, items, field.relation_type)
-        self._field = field
+        RelationshipList.__init__(self, entity, items, field.relation_type, field=field)
 
     def extend(self, entities):
         if self._field._owning_field is not None:
@@ -276,7 +312,7 @@ class _ReverseList(_PairedList, RelationshipList):
                 return
             RelationshipList.append(self, owner)
 
-    def __iadd__(self, entities):
+    def __iadd__(self, entities: Iterable["Entity"], /) -> t.Self:  # type: ignore[override, misc]
         return super().__iadd__(list(entities))
 
     def __setitem__(self, index, value):
@@ -296,8 +332,8 @@ class Field:
     name: str
     _declaring_owner: type["Entity"]
     pk: bool
-    mode: int
-    default: t.Callable[[], t.Any]
+    mode: AccessMode
+    default: t.Callable[[], t.Any] | EllipsisType
     origin: str | None
     destination: str | None
 
@@ -305,10 +341,10 @@ class Field:
         self,
         pk: bool = False,
         mode: AccessMode = AccessMode.ALL,
-        default: t.Any | t.Callable[[], t.Any] = ...,
+        default: t.Any = ...,
         origin: str | None = None,
         destination: str | None = None,
-    ):
+    ) -> None:
         self.pk = pk
         self.mode = mode
         self.origin = origin
@@ -321,21 +357,24 @@ class Field:
 
     def __get__(self, instance: "Entity", owner) -> t.Any:
         if instance:
-            return instance._data.get(self.origin)
+            return instance._data.get(t.cast(str, self.origin))
         else:
             return self
 
-    def __set__(self, instance: "Entity", value):
-        if instance:
-            if self.mode & AccessMode.SET:
-                if self.pk:
-                    instance.storage._set_primary_key(instance, self, value)
-                else:
-                    instance._data[self.origin] = value
-            else:
-                raise ValueError(f"Field '{self.name}' is read only")
+    def __set__(self, instance: "Entity", value: t.Any) -> None:
+        if not instance:
+            raise ReadOnlyFieldError(f"Not able to change {self} on class")
+        self._check_writable(instance)
+        if self.pk:
+            instance.storage._set_primary_key(instance, self, value)
         else:
-            raise ValueError("Not able to change field on class")
+            instance._data[t.cast(str, self.origin)] = value
+
+    def _check_writable(self, instance: "Entity") -> None:
+        if not self.mode & AccessMode.SET:
+            raise ReadOnlyFieldError(
+                f"Field '{self.name}' is read only on {type(instance).__name__}"
+            )
 
     def __set_name__(self, owner, name):
         # EntityMeta reattaches inherited fields when defining subclasses.
@@ -350,20 +389,22 @@ class Field:
         if self.destination is None:
             self.destination = self.origin
 
-    def load(self, data: dict, instance: "Entity") -> t.Any:
-        data = data.get(self.origin, ...)
+    def load(self, data: dict[str, t.Any], instance: "Entity") -> t.Any:
+        value = data.get(t.cast(str, self.origin), ...)
 
-        if data is ...:
-            if self.default is not ...:
+        if value is ...:
+            if callable(self.default):
                 return self.default()
             else:
-                raise ValueError(
+                raise MissingFieldError(
                     f"No value for field '{self.name}' of entity: {type(instance)}",
                 )
 
-        return data
+        return value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        if not hasattr(self, "owner"):
+            return f"<{type(self).__name__}>"
         return f"<Field[{self.owner.__name__}.{self.name}]>"
 
 
@@ -384,12 +425,16 @@ class _EntityRelationField(_RelationField):
             return
 
         if annotation is ...:
-            raise ValueError(f"{field_name} requires an entity_type or annotation")
+            raise ConfigurationError(
+                f"{field_name} requires an entity_type or annotation"
+            )
 
         target, many = _annotation_parts(annotation)
         target = _annotation_entity_type(target)
         if target is None:
-            raise ValueError(f"Unsupported relation annotation for {field_name}")
+            raise ConfigurationError(
+                f"Unsupported relation annotation for {field_name}"
+            )
 
         self._entity_type = target
         if self.many is None:
@@ -401,12 +446,14 @@ class _EntityRelationField(_RelationField):
         if isinstance(entity_type, str):
             try:
                 entity_type = registry.get(entity_type)
-            except (KeyError, ValueError) as error:
+            except RegistryError as error:
                 if not hasattr(self, "owner"):
                     raise
                 field_name = f"{self.owner.__name__}.{self.name}"
-                raise type(error)(f"{field_name}: {error.args[0]}") from error
+                raise RegistryError(f"{field_name}: {error}") from error
             self._entity_type = entity_type
+        if entity_type is None:
+            raise ConfigurationError(f"{self} requires an entity_type or annotation")
         return entity_type
 
 
@@ -415,7 +462,10 @@ class _OwningRelationField(_RelationField):
         super().__init__(**options)
         if back_relation:
             if back_populates is not None:
-                raise ValueError("Use either back_populates or back_relation")
+                raise ConfigurationError(
+                    "Use either back_populates or back_relation "
+                    f"(back_populates={back_populates!r})"
+                )
             warnings.warn(
                 "back_relation is deprecated. Use back_populates instead.",
                 DeprecationWarning,
@@ -435,9 +485,9 @@ class _OwningRelationField(_RelationField):
         owner_name = f"{self._declaring_owner.__name__}.{self.name}"
         try:
             target = self.entity_type
-        except (KeyError, ValueError) as error:
+        except (RegistryError, ConfigurationError) as error:
             target_name = getattr(self._entity_type, "__name__", self._entity_type)
-            raise ValueError(
+            raise type(error)(
                 f"{owner_name} cannot pair with "
                 f"{target_name}.{self.back_populates}: {error.args[0]}"
             ) from error
@@ -446,23 +496,25 @@ class _OwningRelationField(_RelationField):
         pair_name = f"{owner_name} and {target_name}"
         relationship = getattr(target, self.back_populates, ...)
         if relationship is ...:
-            raise ValueError(f"Cannot pair {pair_name}: {target_name} does not exist")
+            raise ConfigurationError(
+                f"Cannot pair {pair_name}: {target_name} does not exist"
+            )
         if not isinstance(relationship, Relationship):
-            raise ValueError(
+            raise ConfigurationError(
                 f"Cannot pair {pair_name}: {target_name} is not a Relationship"
             )
         if relationship._owning_field is not None:
             other = relationship._owning_field
-            raise ValueError(
+            raise ConfigurationError(
                 f"Cannot pair {pair_name}: already paired with "
                 f"{other._declaring_owner.__name__}.{other.name}"
             )
         try:
             related_type = relationship.entity_type
-        except (KeyError, ValueError) as error:
-            raise ValueError(f"Cannot pair {pair_name}: {error.args[0]}") from error
+        except RegistryError as error:
+            raise RegistryError(f"Cannot pair {pair_name}: {error}") from error
         if not issubclass(self._declaring_owner, related_type):
-            raise ValueError(
+            raise ConfigurationError(
                 f"Cannot pair {pair_name}: "
                 f"{target_name} refers to {related_type.__name__}"
             )
@@ -471,30 +523,31 @@ class _OwningRelationField(_RelationField):
         self._relationship = relationship
         return relationship
 
-    def _check_writable(self, owner):
-        if not self.mode & AccessMode.SET:
-            raise ValueError(f"Field '{self.name}' is read only")
+    def _check_owner(self, owner: "Entity") -> None:
+        self._check_writable(owner)
         declaring_owner = self._declaring_owner
         if not isinstance(owner, declaring_owner) or (
             getattr(type(owner), self.name, None) is not self
         ):
-            raise ValueError(
+            raise RelationError(
                 f"Expected an owner of {declaring_owner.__name__}.{self.name}"
             )
 
     def _prepare_target(self, owner, target):
         self._check_target_relationship(target)
         if target.storage is not owner.storage:
-            raise ValueError("Related entities must use the same storage")
+            raise RelationError(
+                f"Related entities for {self} must use the same storage"
+            )
         return target
 
     def _check_target_relationship(self, target):
         entity_type = self.entity_type
         if not isinstance(target, entity_type):
-            raise ValueError(f"Expected {entity_type.__name__} for '{self.name}'")
+            raise RelationError(f"Expected {entity_type.__name__} for {self}")
         target_type = type(target)
         if getattr(target_type, self.back_populates, None) is not self._resolve_pair():
-            raise ValueError(
+            raise RelationError(
                 f"{self._declaring_owner.__name__}.{self.name} requires its paired "
                 f"Relationship on {target_type.__name__}.{self.back_populates}"
             )
@@ -513,13 +566,13 @@ class _OwningRelationField(_RelationField):
     def _replace_paired_data(self, owner, data, *, loading=False):
         relationship = self._resolve_pair()
         if not loading:
-            self._check_writable(owner)
+            self._check_owner(owner)
         old_data = None if loading else owner._data.get(self.origin)
         old_sources = {self._source(item) for item in self._items(old_data)}
         sources = [self._source(item) for item in self._items(data)]
         new_sources = set(sources)
         if len(new_sources) != len(sources):
-            raise ValueError(f"Duplicate entities for '{self.name}'")
+            raise RelationError(f"Duplicate entities for {self}")
 
         added = [source for source in sources if source not in old_sources]
         storage = owner.storage
@@ -530,7 +583,7 @@ class _OwningRelationField(_RelationField):
                     source, self._declaring_owner, self
                 )
                 if old_owner is not None:
-                    self._check_writable(old_owner)
+                    self._check_owner(old_owner)
                     moves.append((old_owner, source))
             for old_owner, source in moves:
                 self._unlink(old_owner, source)
@@ -566,9 +619,9 @@ class Nested(_EntityRelationField, _OwningRelationField):
         self,
         entity_type: str | type["Entity"] | None = None,
         many: bool | None = None,
-        back_relation: t.Any = False,
+        back_relation: Hashable = False,
         mode: AccessMode = AccessMode.ALL,
-        default: t.Any | t.Callable[[], t.Any] = ...,
+        default: t.Any = ...,
         origin: str | None = None,
         destination: str | None = None,
         *,
@@ -591,33 +644,36 @@ class Nested(_EntityRelationField, _OwningRelationField):
 
         return entity
 
-    def load(self, data, instance: "Entity") -> t.NoReturn:
-        data = super().load(data, instance)
+    def load(self, data: dict[str, t.Any], instance: "Entity") -> t.Any:
+        value = super().load(data, instance)
         storage = instance.storage
 
         if self.many:
-            items = (self.entity_type(data=item, storage=storage) for item in data)
+            items = (self.entity_type(data=item, storage=storage) for item in value)
             if self.back_populates is None:
                 return NestedList(
                     entity=instance,
                     items=items,
                     relation_type=self.back_relation,
+                    field=self,
                 )
-            data = list(items)
+            value = list(items)
 
-        elif data is not None:
-            data = self.entity_type(data=data, storage=storage)
+        elif value is not None:
+            value = self.entity_type(data=value, storage=storage)
 
             if self.back_relation:
-                storage.make_relation(
-                    from_=data,
+                _apply_relation(
+                    self,
+                    storage.make_relation,
+                    from_=value,
                     to_=instance,
                     relation_type=self.back_relation,
                 )
 
         if self.back_populates is not None:
-            self._replace_paired_data(instance, data, loading=True)
-        return data
+            self._replace_paired_data(instance, value, loading=True)
+        return value
 
     def __get__(self, instance: "Entity", owner):
         value = super().__get__(instance, owner)
@@ -633,42 +689,48 @@ class Nested(_EntityRelationField, _OwningRelationField):
     def __set__(
         self,
         instance: "Entity",
-        value: "list[Entity] | Entity",
-    ):
+        value: "list[Entity] | Entity | None",
+    ) -> None:
         if not instance:
             return super().__set__(instance, value)
+        self._check_writable(instance)
 
         if self.many and not isinstance(value, list):
-            raise ValueError(
+            raise RelationError(
                 "Only list accepted for nested field with many set to True, "
-                f"got: {value}",
+                f"got {value} for {self}"
             )
 
         if self.back_populates is not None:
             self._set_paired_value(instance, value)
             return
 
-        old_value = getattr(instance, self.origin)
+        old_value = getattr(instance, t.cast(str, self.origin))
         if self.many:
-            value = list(value)
+            items = list(t.cast("list[Entity]", value))
             old_value.clear()
 
             value = NestedList(
                 entity=instance,
-                items=value,
+                items=items,
                 relation_type=self.back_relation,
+                field=self,
             )
         else:
             if self.back_relation and old_value is not None:
-                instance.storage.remove_relation(
+                _apply_relation(
+                    self,
+                    instance.storage.remove_relation,
                     from_=old_value,
                     to_=instance,
                     relation_type=self.back_relation,
                 )
 
             if self.back_relation and value is not None:
-                instance.storage.make_relation(
-                    from_=value,
+                _apply_relation(
+                    self,
+                    instance.storage.make_relation,
+                    from_=t.cast("Entity", value),
                     to_=instance,
                     relation_type=self.back_relation,
                 )
@@ -680,10 +742,10 @@ class Relationship(_EntityRelationField):
     def __init__(
         self,
         entity_type: str | type["Entity"] | None = None,
-        relation_type: t.Any = RelationType.RELATED,
+        relation_type: Hashable = RelationType.RELATED,
         many: bool | None = None,
     ):
-        super().__init__(mode=AccessMode.GET)
+        super().__init__(mode=AccessMode.GET | AccessMode.SET)
 
         self._entity_type = entity_type
         self.relation_type = relation_type
@@ -722,6 +784,7 @@ class Relationship(_EntityRelationField):
     def __set__(self, instance, value):
         if not instance:
             return super().__set__(instance, value)
+        self._check_writable(instance)
 
         if self._owning_field is not None:
             self._set_paired_owners(instance, value)
@@ -741,13 +804,17 @@ class Relationship(_EntityRelationField):
                     if self._owning_field is not None:
                         self._set_paired_owners(instance, [entity, *remaining])
                         return
-                    instance.storage.make_relation(
+                    _apply_relation(
+                        self,
+                        instance.storage.make_relation,
                         from_=instance,
                         to_=entity,
                         relation_type=self.relation_type,
                     )
             else:
-                instance.storage.make_relation(
+                _apply_relation(
+                    self,
+                    instance.storage.make_relation,
                     from_=instance,
                     to_=value,
                     relation_type=self.relation_type,
@@ -770,9 +837,11 @@ class Relationship(_EntityRelationField):
         added = [owner for key, owner in owners.items() if key not in current]
         removed = [owner for key, owner in current.items() if key not in owners]
         for owner in added + removed:
-            field._check_writable(owner)
+            field._check_owner(owner)
             if owner.storage is not target.storage:
-                raise ValueError("Related entities must use the same storage")
+                raise RelationError(
+                    f"Related entities for {self} must use the same storage"
+                )
         prepared = [(owner, field._prepare_target(owner, target)) for owner in added]
 
         source = field._source_for_target(target)
@@ -795,11 +864,11 @@ class Relationship(_EntityRelationField):
 class KeyNested(_EntityRelationField, _OwningRelationField):
     def __init__(
         self,
-        related_entity_field: Field | t.Any,
-        back_relation: t.Any = False,
+        related_entity_field: object,
+        back_relation: Hashable = False,
         many: bool | None = None,
         mode: AccessMode = AccessMode.GET_SET_LOAD,
-        default: t.Any | t.Callable[[], t.Any] = ...,
+        default: t.Any = ...,
         origin: str | None = None,
         destination: str | None = None,
         key_manager: KeyManager | None = None,
@@ -807,8 +876,8 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
         *,
         back_populates: str | None = None,
     ):
-        if not related_entity_field.pk:
-            raise ValueError(
+        if not isinstance(related_entity_field, Field) or not related_entity_field.pk:
+            raise ConfigurationError(
                 f"'{related_entity_field}' is not primary key field",
             )
 
@@ -849,8 +918,8 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
         # Subclasses can share a key descriptor but have different reverse fields.
         target = super().entity_type
         if key_field not in (target.__pk_fields__ or ()):
-            raise ValueError(
-                f"{target.__name__} does not use {key_field.name} as its key"
+            raise ConfigurationError(
+                f"{self}: {target.__name__} does not use {key_field.name} as its key"
             )
         return target
 
@@ -858,10 +927,10 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
         super()._prepare_target(owner, target)
         data = self.key_manager.prepare_to_set(target)
         if data is None and not self.many:
-            raise ValueError(f"Expected a non-null key for '{self.name}'")
+            raise RelationError(f"Expected a non-null key for {self}")
         key = self.key_manager.get(data)
         if owner.storage.get(self.related_entity_field, key) is not target:
-            raise ValueError(f"Expected a stored target for '{self.name}'")
+            raise RelationError(f"Expected a stored target for {self}")
         return data
 
     def _source(self, item):
@@ -886,37 +955,39 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
             self._check_target_relationship(target)
         return target
 
-    def _load_one(self, data: t.Any, storage: "Storage", parent: "Entity"):
+    def _load_one(self, data: Hashable, storage: "Storage", parent: "Entity") -> None:
         if self.back_relation:
-            storage.make_key_relation(
+            _apply_relation(
+                self,
+                storage.make_key_relation,
                 field_from=self.related_entity_field,
                 key_from=data,
                 relation_type=self.back_relation,
                 to=parent,
             )
 
-    def load(self, data: dict, instance: "Entity") -> t.Any:
+    def load(self, data: dict[str, t.Any], instance: "Entity") -> t.Any:
         storage = instance.storage
-        data = super().load(data, instance)
+        value = super().load(data, instance)
 
         if self.back_populates is not None:
-            for item in self._items(data):
+            for item in self._items(value):
                 self._lookup_target(storage, self.key_manager.get(item))
-            self._replace_paired_data(instance, data, loading=True)
-            return data
+            self._replace_paired_data(instance, value, loading=True)
+            return value
 
-        if data is None:
-            return
+        if value is None:
+            return None
 
         if self.many:
-            for item in data:
+            for item in value:
                 key = self.key_manager.get(item)
                 self._load_one(key, storage, instance)
         else:
-            key = self.key_manager.get(data)
+            key = self.key_manager.get(value)
             self._load_one(key, storage, instance)
 
-        return data
+        return value
 
     def __get__(self, instance: "Entity", owner):
         data = super().__get__(instance, owner)
@@ -934,8 +1005,8 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
             entity = self._lookup_target(instance.storage, key)
 
             if not entity and self.required:
-                raise ValueError(
-                    f"Can't find {self.related_entity_field}={key} in storage",
+                raise EntityNotFoundError(
+                    f"{self}: Can't find {self.related_entity_field}={key} in storage"
                 )
 
             return entity
@@ -948,8 +1019,8 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
             if entity:
                 result.append(entity)
             elif self.required:
-                raise ValueError(
-                    f"Can't find {self.related_entity_field}={key} in storage",
+                raise EntityNotFoundError(
+                    f"{self}: Can't find {self.related_entity_field}={key} in storage"
                 )
         return result
 
@@ -980,10 +1051,11 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
     def __set__(
         self,
         instance: "Entity",
-        value: "Entity | list[Entity]",
-    ):
+        value: "Entity | list[Entity] | None",
+    ) -> None:
         if not instance:
             return super().__set__(instance, value)
+        self._check_writable(instance)
 
         if self.back_populates is not None:
             if isinstance(value, _PairedList) and value._belongs_to(self, instance):
@@ -995,7 +1067,9 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
         if self.many:
             if self.back_relation:
                 for old_related_entity in getattr(instance, self.name):
-                    instance.storage.remove_relation(
+                    _apply_relation(
+                        self,
+                        instance.storage.remove_relation,
                         from_=old_related_entity,
                         to_=instance,
                         relation_type=self.back_relation,
@@ -1003,11 +1077,13 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
 
             new_data = []
 
-            for related_entity in value:
+            for related_entity in t.cast("list[Entity]", value):
                 new_data.append(self.key_manager.prepare_to_set(related_entity))
 
                 if self.back_relation:
-                    instance.storage.make_relation(
+                    _apply_relation(
+                        self,
+                        instance.storage.make_relation,
                         from_=related_entity,
                         to_=instance,
                         relation_type=self.back_relation,
@@ -1018,17 +1094,22 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
                 old_related_entity = getattr(instance, self.name)
 
                 if old_related_entity:
-                    instance.storage.remove_relation(
+                    _apply_relation(
+                        self,
+                        instance.storage.remove_relation,
                         from_=old_related_entity,
                         to_=instance,
                         relation_type=self.back_relation,
                     )
 
-            new_data = self.key_manager.prepare_to_set(value)
+            related = t.cast("Entity | None", value)
+            new_data = self.key_manager.prepare_to_set(related)
 
             if self.back_relation:
-                instance.storage.make_relation(
-                    from_=value,
+                _apply_relation(
+                    self,
+                    instance.storage.make_relation,
+                    from_=t.cast("Entity", related),
                     to_=instance,
                     relation_type=self.back_relation,
                 )

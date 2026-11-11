@@ -1,7 +1,7 @@
 import enum
 
 
-class AccessMode(int, enum.Enum):
+class AccessMode(enum.IntFlag):
     GET = 1
     SET = 1 << 1
     LOAD = 1 << 2
