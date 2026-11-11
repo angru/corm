@@ -7,7 +7,8 @@ name = "corm"
 version = "0.0.4"
 description = "Relationships between data structures"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
+license = "MIT"
 license-files = ["LICENSE"]
 authors = [
     {name = "angru", email = "angru@list.ru"},
@@ -16,39 +17,57 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
-    "Operating System :: Unix",
-    "Operating System :: POSIX :: Linux",
-    "Environment :: Console",
-    "Environment :: MacOS X",
+    "Operating System :: OS Independent",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Internet",
 ]
+
+[project.urls]
+Homepage = "https://github.com/angru/corm"
+Documentation = "https://angru.github.io/corm/"
+Issues = "https://github.com/angru/corm/issues"
 
 [tool.setuptools]
 packages = ["corm"]
 
 [dependency-groups]
-dev = [
-    "markdown-include>=0.8.1",
+docs = [
     "mkdocs>=1.6.1",
-    "mkdocs-material>=9.6.14",
-    "setuptools>=80.9.0",
-    "wheel>=0.45.1",
+    "mkdocs-material>=9.8.1",
 ]
 lint = [
-    "black>=25.1.0",
-    "pre-commit>=4.2.0",
-    "ruff>=0.11.13",
+    "pre-commit>=4.7.0",
+    "ruff==0.17.4",
 ]
 test = [
-    "pytest>=8.4.0",
-    "pytest-cov>=6.1.1",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "PERF", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B018"]
+"docs/examples/*" = ["B018"]
+
+[tool.ruff.format]
+# MkDocs snippet directives also appear inside fenced Python code blocks.
+exclude = ["*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["corm"]
+branch = true

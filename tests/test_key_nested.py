@@ -2,7 +2,7 @@ import typing as t
 
 import pytest
 
-from corm import Entity, Field, KeyNested, Storage, Relationship, KeyManager
+from corm import Entity, Field, KeyManager, KeyNested, Relationship, Storage
 
 
 def test_nested_key():
@@ -24,7 +24,7 @@ def test_nested_key():
     assert holder.dict() == {"entity_id": 123}
 
     class ManyEntityHolder(Entity):
-        entities: t.List[SomeEntity] = KeyNested(
+        entities: list[SomeEntity] = KeyNested(
             related_entity_field=SomeEntity.id,
             origin="entity_ids",
             many=True,
@@ -54,7 +54,7 @@ def test_make_back_relationship():
         holder: "EntityHolder" = Relationship("EntityHolder")
 
     class EntityHolder(Entity):
-        entities: t.List[SomeEntity] = KeyNested(
+        entities: list[SomeEntity] = KeyNested(
             related_entity_field=SomeEntity.id,
             origin="entity_ids",
             many=True,
@@ -94,7 +94,7 @@ def test_complex_key():
             return {"id": entity.id}
 
     class ManyEntityHolder(Entity):
-        entities: t.List[SomeEntity] = KeyNested(
+        entities: list[SomeEntity] = KeyNested(
             related_entity_field=SomeEntity.id,
             origin="entity_ids",
             many=True,
@@ -147,7 +147,7 @@ def test_change_values():
         )
 
     class ManyEntityHolder(Entity):
-        entities: t.List[SomeEntity] = KeyNested(
+        entities: list[SomeEntity] = KeyNested(
             related_entity_field=SomeEntity.id,
             origin="entity_ids",
             many=True,

@@ -1,30 +1,30 @@
 ## Simple relationship
 
 ```python
-{!examples/relationships_simple.py!}
+--8<-- "examples/relationships_simple.py"
 ```
 
 ## Bidirectional relationships
 
 ```python
-{!examples/relationships_bidirectional.py!}
+--8<-- "examples/relationships_bidirectional.py"
 ```
 
 ## Self-nested
 ```python
-{!examples/relationships_self_nested.py!}
+--8<-- "examples/relationships_self_nested.py"
 ```
 
 ## Change relationships between entities
 
 ```python
-{!examples/relationships_change.py!}
+--8<-- "examples/relationships_change.py"
 ```
 
 Also it works with `many=True`
 
 ```python
-{!examples/relationships_change_many.py!}
+--8<-- "examples/relationships_change_many.py"
 ```
 
 !!! Note
@@ -35,5 +35,5 @@ Also it works with `many=True`
 It is not common case but is is able to use this way
 
 ```python
-{!examples/relationshps_manually_related.py!}
+--8<-- "examples/relationshps_manually_related.py"
 ```

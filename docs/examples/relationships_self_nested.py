@@ -1,11 +1,9 @@
-import typing as t
-
-from corm import Storage, Entity, Relationship, Nested
+from corm import Entity, Nested, Relationship, Storage
 
 
 class Item(Entity):
     id: int
-    items: t.List["Item"] = Nested(
+    items: list["Item"] = Nested(
         entity_type="Item",
         back_relation=True,
         many=True,

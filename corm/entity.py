@@ -1,7 +1,7 @@
 import sys
 import typing as t
 
-from corm import registry, constants
+from corm import constants, registry
 from corm.fields import Field, Nested
 
 if t.TYPE_CHECKING:
@@ -25,7 +25,7 @@ else:
 
 
 class EntityMeta(type):
-    def __new__(mcs, name, bases, attrs: t.Dict[str, t.Any]):
+    def __new__(mcs, name, bases, attrs: dict[str, t.Any]):
         fields = {}
         pk_fields = []
 
@@ -47,11 +47,12 @@ class EntityMeta(type):
                     and not isinstance(
                         attr_value, (property, classmethod, staticmethod)
                     )
-                    and not callable(attr_value)  # noqa
+                    and not callable(attr_value)
                 ):
                     fields[attr_name] = Field(default=attr_value)
 
-            for attr_name, type_ in annotations.items():
+            # A class can supply its own annotations mapping.
+            for attr_name, _ in annotations.items():  # noqa: PERF102
                 if not attr_name.startswith("_") and attr_name not in fields:
                     fields[attr_name] = Field()
 
@@ -77,11 +78,11 @@ class EntityMeta(type):
 
 
 class Entity(metaclass=EntityMeta):
-    _data: t.Dict[str, t.Any]
+    _data: dict[str, t.Any]
     storage: "Storage"
-    __pk_fields__: t.Optional[t.List[Field]] = None
-    __fields__: t.Dict[str, Field]
-    _field_load_groups: t.Tuple[t.Tuple[Field, ...], t.Tuple[Field, ...]]
+    __pk_fields__: list[Field] | None = None
+    __fields__: dict[str, Field]
+    _field_load_groups: tuple[tuple[Field, ...], tuple[Field, ...]]
 
     def __init__(self, data: t.Any, storage: "Storage"):
         self._data = data

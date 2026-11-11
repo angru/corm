@@ -1,6 +1,4 @@
-import typing as t
-
-from corm import Entity, Relationship, Nested, Storage
+from corm import Entity, Nested, Relationship, Storage
 
 
 class Address(Entity):
@@ -10,7 +8,7 @@ class Address(Entity):
 
 class User(Entity):
     id: int
-    addresses: t.List[Address] = Nested(
+    addresses: list[Address] = Nested(
         entity_type=Address,
         back_relation=True,
         many=True,

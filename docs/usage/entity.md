@@ -30,7 +30,7 @@ assert john.dict() == {
 To set additional settings for any entity fields there is `Field` class
 
 ```python
-{!examples/entity_fields.py!}
+--8<-- "examples/entity_fields.py"
 ```
 
 ## Default values
@@ -38,12 +38,12 @@ To set additional settings for any entity fields there is `Field` class
 There are two ways to set default value, just set as class value or through `default` param of `Field`, `Nested` or `KeyNested`
 
 ```python
-{!examples/entity_default_values.py!}
+--8<-- "examples/entity_default_values.py"
 ```
 
 !!! Note
     `default` also can be callable, corm call it each time when creating entity instance if value of field is not provided. But you can use it only with `Field`, `Nested` or `KeyNested`, inplace is not allowed
 
 ```python
-{!examples/entity_default_callable_inplace.py!}
+--8<-- "examples/entity_default_callable_inplace.py"
 ```

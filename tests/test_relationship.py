@@ -1,5 +1,3 @@
-import typing as t
-
 import pytest
 
 from corm import Entity, Relationship, RelationType, Storage
@@ -32,7 +30,7 @@ def test_relationship():
 
     class ManyEntityHolder(Entity):
         name: str
-        entities: t.List[SomeEntity] = Relationship(
+        entities: list[SomeEntity] = Relationship(
             entity_type=SomeEntity,
             many=True,
             relation_type=RelationType.CHILD,
@@ -72,7 +70,7 @@ def test_assign_new_value_to_relationship():
 
     class ManyEntityHolder(Entity):
         name: str
-        entities: t.List[SomeEntity] = Relationship(
+        entities: list[SomeEntity] = Relationship(
             entity_type=SomeEntity,
             many=True,
         )

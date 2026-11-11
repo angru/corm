@@ -1,8 +1,6 @@
-import typing as t
-
 import pytest
 
-from corm import Storage, Entity, Field, Nested, Relationship
+from corm import Entity, Field, Nested, Relationship, Storage
 
 
 def test_nested():
@@ -34,13 +32,13 @@ def test_nested():
 def test_self_related():
     class Item(Entity):
         id: int = Field(pk=True)
-        items: t.List["Item"] = Nested(  # noqa: F821
+        items: list["Item"] = Nested(
             entity_type="Item",
             many=True,
             back_relation=True,
             default=list,
         )
-        parent: "Item" = Relationship(entity_type="Item")  # noqa: F821
+        parent: "Item" = Relationship(entity_type="Item")
 
     storage = Storage()
     item1 = Item(
@@ -118,7 +116,7 @@ def test_set_value_many():
 
     class User(Entity):
         id: int
-        addresses: t.List[Address] = Nested(entity_type=Address, many=True)
+        addresses: list[Address] = Nested(entity_type=Address, many=True)
 
     storage = Storage()
     john = User(
@@ -203,7 +201,7 @@ def test_set_value_many_with_back_relationship():
 
     class User(Entity):
         id: int
-        addresses: t.List[Address] = Nested(
+        addresses: list[Address] = Nested(
             entity_type=Address,
             back_relation=True,
             many=True,
@@ -259,7 +257,7 @@ def test_change_back_relationship_when_many():
 
     class User(Entity):
         id: int
-        addresses: t.List[Address] = Nested(
+        addresses: list[Address] = Nested(
             entity_type=Address,
             back_relation=True,
             many=True,

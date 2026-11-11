@@ -1,4 +1,4 @@
-from corm import Storage, Entity
+from corm import Entity, Storage
 
 
 class Foo(Entity):

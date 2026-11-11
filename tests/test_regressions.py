@@ -114,7 +114,7 @@ def test_registry_uses_qualnames():
 
 
 def test_registry_unknown_name():
-    with pytest.raises(KeyError, match="Unknown entity.*MissingUser"):
+    with pytest.raises(KeyError, match=r"Unknown entity.*MissingUser"):
         registry.get("MissingUser")
 
 
@@ -260,7 +260,7 @@ def test_duplicate_primary_key_does_not_store_nested_child(use_default):
     if not use_default:
         duplicate_data["user_id"] = 1
 
-    with pytest.raises(ValueError, match="User.id.*=1 already in storage"):
+    with pytest.raises(ValueError, match=r"User.id.*=1 already in storage"):
         User(duplicate_data, storage)
 
     assert storage.get(User.id, 1) is original
@@ -290,7 +290,7 @@ def test_duplicate_primary_key_does_not_add_key_nested_relation(target_exists):
         target = Target({"id": 1}, storage)
     original = Holder({"target": 1}, storage)
 
-    with pytest.raises(ValueError, match="Holder.id.*=10 already in storage"):
+    with pytest.raises(ValueError, match=r"Holder.id.*=10 already in storage"):
         Holder({"target": 1}, storage)
 
     if not target_exists:
@@ -304,7 +304,9 @@ def test_duplicate_primary_key_does_not_add_key_nested_relation(target_exists):
 def test_annotation_only_field_with_future_annotations():
     namespace = {"Entity": Entity, "__name__": __name__}
     exec(
-        "from __future__ import annotations\nclass Item(Entity):\n    value: NotDefined",
+        "from __future__ import annotations\n"
+        "class Item(Entity):\n"
+        "    value: NotDefined",
         namespace,
     )
     item = namespace["Item"]({"value": 42}, Storage())

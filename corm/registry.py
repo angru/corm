@@ -1,7 +1,7 @@
 _registry = {}
 
 
-def add(entity_class, name: str = None):
+def add(entity_class, name: str | None = None):
     if name is None:
         name = f"{entity_class.__module__}.{entity_class.__qualname__}"
     _registry[name] = entity_class

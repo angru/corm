@@ -1,7 +1,7 @@
 import typing as t
 
 from corm import registry
-from corm.constants import RelationType, AccessMode
+from corm.constants import AccessMode, RelationType
 
 if t.TYPE_CHECKING:
     from corm.entity import Entity
@@ -67,7 +67,7 @@ class RelationshipList(list):
         if self.relation_type:
             self.make_relation(entity)
 
-    def extend(self, entities: t.List["Entity"]) -> None:
+    def extend(self, entities: list["Entity"]) -> None:
         for entity in entities:
             super().append(entity)
 
@@ -135,16 +135,16 @@ class Field:
     pk: bool
     mode: int
     default: t.Callable[[], t.Any]
-    origin: t.Optional[str]
-    destination: t.Optional[str]
+    origin: str | None
+    destination: str | None
 
     def __init__(
         self,
         pk: bool = False,
         mode: AccessMode = AccessMode.ALL,
-        default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
-        origin: t.Optional[str] = None,
-        destination: t.Optional[str] = None,
+        default: t.Any | t.Callable[[], t.Any] = ...,
+        origin: str | None = None,
+        destination: str | None = None,
     ):
         self.pk = pk
         self.mode = mode
@@ -201,13 +201,13 @@ class Field:
 class Nested(Field):
     def __init__(
         self,
-        entity_type: t.Union[str, t.Type["Entity"]],
+        entity_type: str | type["Entity"],
         many: bool = False,
         back_relation: t.Any = False,
         mode: AccessMode = AccessMode.ALL,
-        default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
-        origin: str = None,
-        destination: str = None,
+        default: t.Any | t.Callable[[], t.Any] = ...,
+        origin: str | None = None,
+        destination: str | None = None,
     ):
         super().__init__(
             mode=mode,
@@ -224,7 +224,7 @@ class Nested(Field):
         self.back_relation = back_relation
 
     @property
-    def entity_type(self) -> t.Type["Entity"]:
+    def entity_type(self) -> type["Entity"]:
         if isinstance(self._entity_type, str):
             self._entity_type = registry.get(self._entity_type)
 
@@ -262,7 +262,7 @@ class Nested(Field):
     def __set__(
         self,
         instance: "Entity",
-        value: t.Union[t.List["Entity"], "Entity"],
+        value: "list[Entity] | Entity",
     ):
         if not instance:
             return super().__set__(instance, value)
@@ -272,7 +272,8 @@ class Nested(Field):
         if self.many:
             if not isinstance(value, list):
                 raise ValueError(
-                    f"Only list accepted for nested field with many set to True, got: {value}",
+                    "Only list accepted for nested field with many set to True, "
+                    f"got: {value}",
                 )
 
             value = list(value)
@@ -304,7 +305,7 @@ class Nested(Field):
 class Relationship(Field):
     def __init__(
         self,
-        entity_type: t.Union[str, t.Type["Entity"]],
+        entity_type: str | type["Entity"],
         relation_type: t.Any = RelationType.RELATED,
         many: bool = False,
     ):
@@ -315,7 +316,7 @@ class Relationship(Field):
         self.many = many
 
     @property
-    def entity_type(self) -> t.Type["Entity"]:
+    def entity_type(self) -> type["Entity"]:
         if isinstance(self._entity_type, str):
             self._entity_type = registry.get(self._entity_type)
 
@@ -373,14 +374,14 @@ class Relationship(Field):
 class KeyNested(Field):
     def __init__(
         self,
-        related_entity_field: t.Union["Field", t.Any],
+        related_entity_field: Field | t.Any,
         back_relation: t.Any = False,
         many: bool = False,
         mode: AccessMode = AccessMode.GET_SET_LOAD,
-        default: t.Union[t.Any, t.Callable[[], t.Any]] = ...,
-        origin: t.Optional[str] = None,
-        destination: t.Optional[str] = None,
-        key_manager: t.Optional[KeyManager] = None,
+        default: t.Any | t.Callable[[], t.Any] = ...,
+        origin: str | None = None,
+        destination: str | None = None,
+        key_manager: KeyManager | None = None,
         required: bool = True,
     ):
         if not related_entity_field.pk:
@@ -474,7 +475,7 @@ class KeyNested(Field):
     def __set__(
         self,
         instance: "Entity",
-        value: t.Union["Entity", t.List["Entity"]],
+        value: "Entity | list[Entity]",
     ):
         if not instance:
             return super().__set__(instance, value)
