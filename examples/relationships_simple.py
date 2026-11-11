@@ -1,4 +1,4 @@
-from corm import Storage, Entity, Nested
+from corm import Entity, Nested, Storage
 
 
 class Address(Entity):
@@ -8,20 +8,20 @@ class Address(Entity):
 
 class User(Entity):
     name: str
-    address: Address = Nested(entity_type=Address)
+    address: Address = Nested()
 
 
 storage = Storage()
 john = User(
     data={
-        'name': 'John',
-        'address': {
-            'street': 'First',
-            'number': 1,
+        "name": "John",
+        "address": {
+            "street": "First",
+            "number": 1,
         },
     },
     storage=storage,
 )
 
-assert john.address.street == 'First'
+assert john.address.street == "First"
 assert john.address.number == 1

@@ -1,30 +1,28 @@
-from corm import Storage, Entity, Relationship, Nested
+from corm import Entity, Nested, Relationship, Storage
 
 
 class Address(Entity):
     street: str
     number: int
-    user: 'User' = Relationship(entity_type='User')
+    user: "User | None" = Relationship()
 
 
 class User(Entity):
     name: str
-    address: Address = Nested(
-        entity_type=Address,
-        back_relation=True,
-    )
+    address: Address | None = Nested(back_populates="user")
 
 
 storage = Storage()
 john = User(
     data={
-        'name': 'John',
-        'address': {
-            'street': 'First',
-            'number': 1,
+        "name": "John",
+        "address": {
+            "street": "First",
+            "number": 1,
         },
     },
     storage=storage,
 )
 
+assert john.address is not None
 assert john.address.user == john
