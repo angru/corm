@@ -81,6 +81,36 @@ def test_make_back_relationship():
     assert delayed_entity.dict() == {"id": 456, "name": "delayed entity"}
 
 
+def test_pending_back_relationships_include_subclasses_in_creation_order():
+    class Team(Entity):
+        id: int = Field(pk=True)
+        members = Relationship(entity_type="Member", many=True)
+        managers = Relationship(entity_type="Manager", many=True)
+
+    class Member(Entity):
+        team = KeyNested(Team.id, origin="team_id", back_relation=True)
+
+    class Manager(Member):
+        pass
+
+    class Director(Manager):
+        pass
+
+    class Contractor(Member):
+        pass
+
+    storage = Storage()
+    director = Director({"team_id": 1}, storage)
+    member = Member({"team_id": 1}, storage)
+    contractor = Contractor({"team_id": 1}, storage)
+    team = Team({"id": 1}, storage)
+    manager = Manager({"team_id": 1}, storage)
+
+    assert director.team is team
+    assert team.members == [director, member, contractor, manager]
+    assert team.managers == [director, manager]
+
+
 def test_complex_key():
     class SomeEntity(Entity):
         id: int = Field(pk=True)
