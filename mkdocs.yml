@@ -12,13 +12,14 @@ nav:
       - usage/relationships.md
       - usage/key-relationships.md
       - usage/storage.md
-  - To Be Done: to-be-done.md
+  - Open feature requests: to-be-done.md
   - FAQ: faq.md
+  - Changelog: changelog.md
 
 markdown_extensions:
   - pymdownx.highlight
   - pymdownx.superfences
   - admonition
   - pymdownx.snippets:
-      base_path: [docs]
+      base_path: [.]
       check_paths: true
