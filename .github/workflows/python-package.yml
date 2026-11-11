@@ -68,6 +68,8 @@ jobs:
           enable-cache: true
       - name: Install documentation dependencies
         run: uv sync --locked --group docs
+      - name: Check the README example
+        run: uv run --no-sync python .github/scripts/sync_readme_example.py --check
       - name: Build documentation
         env:
           # Material prints its end-of-life notice independently of MkDocs warnings.

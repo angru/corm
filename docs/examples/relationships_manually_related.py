@@ -10,7 +10,7 @@ class Address(Entity):
 
 class User(Entity):
     name: str
-    address: Address = Relationship(relation_type=RelationType.PARENT)
+    address: Address | None = Relationship(relation_type=RelationType.PARENT)
 
 
 address = Address({"street": "First", "number": 1}, storage)
@@ -23,3 +23,11 @@ storage.make_relation(
 )
 
 assert john.address == address
+
+storage.remove_relation(
+    from_=john,
+    to_=address,
+    relation_type=RelationType.PARENT,
+)
+
+assert john.address is None
