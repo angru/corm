@@ -4,7 +4,7 @@ from corm import Entity, Field, KeyNested, Relationship, Storage
 class SomeEntity(Entity):
     id: int = Field(pk=True)
     name: str
-    holder: "EntityHolder" = Relationship(entity_type="EntityHolder")
+    holder: "EntityHolder" = Relationship()
 
 
 class EntityHolder(Entity):

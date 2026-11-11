@@ -3,11 +3,13 @@ from corm import Entity, Field, KeyNested, Relationship, Storage
 
 class User(Entity):
     id: int = Field(pk=True)
-    addresses = Relationship("Address", many=True)
+    addresses: list["Address"] = Relationship()
 
 
 class Address(Entity):
-    user = KeyNested(User.id, origin="user_id", back_relation=True, required=False)
+    user: User | None = KeyNested(
+        User.id, origin="user_id", back_relation=True, required=False
+    )
 
 
 storage = Storage()

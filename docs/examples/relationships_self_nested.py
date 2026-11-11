@@ -3,13 +3,8 @@ from corm import Entity, Nested, Relationship, Storage
 
 class Item(Entity):
     id: int
-    items: list["Item"] = Nested(
-        entity_type="Item",
-        back_relation=True,
-        many=True,
-        default=list,
-    )
-    parent: "Item" = Relationship(entity_type="Item")
+    items: list["Item"] = Nested(back_relation=True, default=list)
+    parent: "Item | None" = Relationship()
 
 
 storage = Storage()

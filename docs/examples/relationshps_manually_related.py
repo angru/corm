@@ -10,10 +10,7 @@ class Address(Entity):
 
 class User(Entity):
     name: str
-    address: Address = Relationship(
-        entity_type=Address,
-        relation_type=RelationType.PARENT,
-    )
+    address: Address = Relationship(relation_type=RelationType.PARENT)
 
 
 address = Address({"street": "First", "number": 1}, storage)
