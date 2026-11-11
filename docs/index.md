@@ -19,11 +19,11 @@ from corm import Storage, Entity, Nested, Relationship
 class Address(Entity):
     street: str
     number: int
-    user: 'User' = Relationship()
+    user: 'User | None' = Relationship()
 
 class User(Entity):
     name: str
-    address: Address = Nested(back_relation=True)
+    address: Address | None = Nested(back_populates='user')
 
 
 storage = Storage()

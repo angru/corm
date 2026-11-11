@@ -10,7 +10,7 @@ from corm import (
 class SomeEntity(Entity):
     id: int = Field(pk=True)
     name: str
-    holder: "EntityHolder" = Relationship()
+    holder: "EntityHolder | None" = Relationship()
 
 
 class EntityHolder(Entity):
@@ -18,13 +18,13 @@ class EntityHolder(Entity):
     entity: SomeEntity = KeyNested(
         related_entity_field=SomeEntity.id,
         origin="entity_id",
-        back_relation=True,
+        back_populates="holder",
     )
 
 
 storage = Storage()
-entity = SomeEntity({"id": 123, "name": "entity"}, storage=storage)
 holder = EntityHolder({"name": "holder", "entity_id": 123}, storage=storage)
+entity = SomeEntity({"id": 123, "name": "entity"}, storage=storage)
 
 assert holder.entity == entity
 assert entity.holder == holder

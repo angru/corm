@@ -4,14 +4,14 @@ from corm import Entity, Field, KeyNested, Relationship, Storage
 class SomeEntity(Entity):
     id: int = Field(pk=True)
     name: str
-    holder: "EntityHolder" = Relationship()
+    holder: "EntityHolder | None" = Relationship()
 
 
 class EntityHolder(Entity):
-    entity: SomeEntity = KeyNested(
+    entity: SomeEntity | None = KeyNested(
         related_entity_field=SomeEntity.id,
         origin="entity_id",
-        back_relation=True,
+        back_populates="holder",
     )
 
 
@@ -29,3 +29,11 @@ assert entity1.holder is None
 assert entity2.holder is holder
 assert holder.entity is entity2
 assert holder.dict() == {"entity_id": 321}
+
+new_holder = EntityHolder({"entity_id": None}, storage)
+entity2.holder = new_holder
+
+assert holder.entity is None
+assert holder.dict() == {"entity_id": None}
+assert new_holder.entity is entity2
+assert new_holder.dict() == {"entity_id": 321}
