@@ -1,6 +1,6 @@
 import pytest
 
-from corm import Entity, Relationship, RelationType, Storage
+from corm import Entity, Field, Nested, Relationship, RelationType, Storage
 
 
 def test_relationship():
@@ -152,3 +152,20 @@ def test_assign_new_value_to_relationship():
         )
         == []
     )
+
+
+def test_nested_back_relationship_to_subclass():
+    class Address(Entity):
+        street: str
+        user: "User" = Relationship(entity_type="User")
+
+    class User(Entity):
+        id: int = Field(pk=True)
+        address: Address = Nested(entity_type=Address, back_relation=True)
+
+    class Admin(User):
+        pass
+
+    admin = Admin({"id": 1, "address": {"street": "x"}}, Storage())
+
+    assert admin.address.user is admin

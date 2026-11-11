@@ -3,10 +3,31 @@ import functools
 import typing as t
 from collections import defaultdict
 
+from corm.entity import Entity
+
 if t.TYPE_CHECKING:
-    from corm.entity import Entity, Field
+    from corm.entity import Field
 
 EntityRef = collections.namedtuple("EntityRef", ["field", "key"])
+
+
+def _relation_base_types(
+    entity_type: type[Entity | EntityRef],
+) -> t.Iterator[type[Entity]]:
+    for base in entity_type.__mro__[1:]:
+        if issubclass(base, Entity):
+            yield base
+
+
+def _find_exact_relation(
+    relations: list[Entity | EntityRef], target: Entity | EntityRef
+) -> int | None:
+    # A base lookup can contain subclasses, but duplicate checks use the exact type.
+    target_type = type(target)
+    for index, related in enumerate(relations):
+        if type(related) is target_type and (related is target or related == target):
+            return index
+    return None
 
 
 class Storage:
@@ -60,22 +81,26 @@ class Storage:
         relation_type: t.Any,
     ):
         # TODO: probably weakref will be better
-        relations = self._relations[from_][type(to_), relation_type]
+        relations = self._relations[from_]
+        target_type = type(to_)
+        matches = relations[target_type, relation_type]
 
-        if to_ not in relations:
-            relations.append(to_)
-        else:
+        if _find_exact_relation(matches, to_) is not None:
             raise ValueError(
                 f"Relation type {relation_type} already exists "
                 f"between {from_} and {to_}",
             )
 
+        matches.append(to_)
+        for base in _relation_base_types(target_type):
+            relations[base, relation_type].append(to_)
+
     def get_related_entities(
         self,
-        entity: ["Entity", "EntityRef"],
-        related_entity_type: type["Entity"],
+        entity: Entity | EntityRef,
+        related_entity_type: type[Entity],
         relation_type: t.Any,
-    ) -> list["Entity"]:
+    ) -> list[Entity]:
         return self._relations[entity][related_entity_type, relation_type]
 
     def get_one_related_entity(
@@ -91,16 +116,46 @@ class Storage:
 
     def remove_relation(
         self,
-        from_: "Entity | EntityRef",
-        to_: "Entity | EntityRef",
+        from_: Entity | EntityRef,
+        to_: Entity | EntityRef,
         relation_type: t.Any,
-    ) -> t.NoReturn:
-        self._relations[from_][type(to_), relation_type].remove(to_)
+    ) -> None:
+        relations = self._relations[from_]
+        target_type = type(to_)
+        matches = relations[target_type, relation_type]
+        index = _find_exact_relation(matches, to_)
+        if index is None:
+            raise ValueError("list.remove(x): x not in list")
+
+        removed = matches.pop(index)
+        for base in _relation_base_types(target_type):
+            related_entities = relations[base, relation_type]
+            # Another class in this bucket may compare equal to the removed target.
+            for index, related in enumerate(related_entities):
+                if related is removed:
+                    del related_entities[index]
+                    break
 
     def remove_relations(
         self,
-        entity: "Entity | EntityRef",
-        related_entity_type: type["Entity"],
+        entity: Entity | EntityRef,
+        related_entity_type: type[Entity],
         relation_type: t.Any,
-    ) -> t.NoReturn:
-        self._relations[entity][related_entity_type, relation_type].clear()
+    ) -> None:
+        relations = self._relations[entity]
+        matches = relations[related_entity_type, relation_type]
+        removed_types = {type(related) for related in matches}
+        affected_types = removed_types | {
+            base
+            for target_type in removed_types
+            for base in _relation_base_types(target_type)
+        }
+        affected_types.discard(related_entity_type)
+        for target_type in affected_types:
+            related_entities = relations[target_type, relation_type]
+            related_entities[:] = [
+                related
+                for related in related_entities
+                if type(related) not in removed_types
+            ]
+        matches.clear()
