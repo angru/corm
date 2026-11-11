@@ -1,4 +1,6 @@
+import ast
 import typing as t
+from types import NoneType, UnionType
 
 from corm import registry
 from corm.constants import AccessMode, RelationType
@@ -6,6 +8,64 @@ from corm.constants import AccessMode, RelationType
 if t.TYPE_CHECKING:
     from corm.entity import Entity
     from corm.storage import Storage
+
+
+def _annotation_expression(annotation):
+    if isinstance(annotation, t.ForwardRef):
+        annotation = annotation.__forward_arg__
+
+    # Postponed annotations can contain a second layer of quotes.
+    while True:
+        if isinstance(annotation, ast.Constant):
+            annotation = annotation.value
+        elif isinstance(annotation, str):
+            try:
+                annotation = ast.parse(annotation.strip(), mode="eval").body
+            except SyntaxError:
+                return None
+        else:
+            return annotation
+
+
+def _annotation_name(expression):
+    if isinstance(expression, ast.Name):
+        return expression.id
+    if isinstance(expression, ast.Attribute):
+        prefix = _annotation_name(expression.value)
+        if prefix is not None:
+            return f"{prefix}.{expression.attr}"
+    return None
+
+
+def _annotation_parts(annotation):
+    """Return the target expression and whether the relation is a list."""
+    annotation = _annotation_expression(annotation)
+    if isinstance(annotation, ast.expr):
+        match annotation:
+            case (
+                ast.BinOp(left=ast.Constant(value=None), op=ast.BitOr(), right=target)
+                | ast.BinOp(left=target, op=ast.BitOr(), right=ast.Constant(value=None))
+            ):
+                return _annotation_parts(target)
+            case ast.Subscript(value=alias, slice=item):
+                match _annotation_name(alias):
+                    case "Optional" | "typing.Optional":
+                        return _annotation_parts(item)
+                    case "list" | "List" | "typing.List":
+                        return item, True
+            case _:
+                if _annotation_name(annotation) in {"list", "List", "typing.List"}:
+                    return None, True
+        return annotation, False
+
+    origin = t.get_origin(annotation)
+    args = t.get_args(annotation)
+    if origin is list or annotation is list:
+        return (args[0] if len(args) == 1 else None), True
+    if origin in (t.Union, UnionType) and len(args) == 2 and NoneType in args:
+        target = next(arg for arg in args if arg is not NoneType)
+        return _annotation_parts(target)
+    return annotation, False
 
 
 def proxy_factory(value: t.Any) -> t.Callable[[], t.Any]:
@@ -201,11 +261,62 @@ class Field:
         return f"<Field[{self.owner.__name__}.{self.name}]>"
 
 
-class Nested(Field):
+class _RelationField(Field):
+    many: bool | None
+
+    def _infer_from_annotation(self, annotation, field_name: str) -> None:
+        if self.many is None:
+            _, self.many = _annotation_parts(annotation)
+
+
+class _EntityRelationField(_RelationField):
+    _entity_type: str | type["Entity"] | None
+
+    def _infer_from_annotation(self, annotation, field_name: str) -> None:
+        if self._entity_type is not None:
+            super()._infer_from_annotation(annotation, field_name)
+            return
+
+        from corm.entity import Entity
+
+        if annotation is ...:
+            raise ValueError(f"{field_name} requires an entity_type or annotation")
+
+        target, many = _annotation_parts(annotation)
+        target = _annotation_expression(target)
+        if isinstance(target, ast.expr):
+            target = _annotation_name(target)
+
+        if not (
+            isinstance(target, str)
+            or (isinstance(target, type) and issubclass(target, Entity))
+        ):
+            raise ValueError(f"Unsupported relation annotation for {field_name}")
+
+        self._entity_type = target
+        if self.many is None:
+            self.many = many
+
+    @property
+    def entity_type(self) -> type["Entity"]:
+        entity_type = self._entity_type
+        if isinstance(entity_type, str):
+            try:
+                entity_type = registry.get(entity_type)
+            except (KeyError, ValueError) as error:
+                if not hasattr(self, "owner"):
+                    raise
+                field_name = f"{self.owner.__name__}.{self.name}"
+                raise type(error)(f"{field_name}: {error.args[0]}") from error
+            self._entity_type = entity_type
+        return entity_type
+
+
+class Nested(_EntityRelationField):
     def __init__(
         self,
-        entity_type: str | type["Entity"],
-        many: bool = False,
+        entity_type: str | type["Entity"] | None = None,
+        many: bool | None = None,
         back_relation: t.Any = False,
         mode: AccessMode = AccessMode.ALL,
         default: t.Any | t.Callable[[], t.Any] = ...,
@@ -225,13 +336,6 @@ class Nested(Field):
         self._entity_type = entity_type
         self.many = many
         self.back_relation = back_relation
-
-    @property
-    def entity_type(self) -> type["Entity"]:
-        if isinstance(self._entity_type, str):
-            self._entity_type = registry.get(self._entity_type)
-
-        return self._entity_type
 
     def _load_one(self, data: t.Any, storage: "Storage", parent: "Entity"):
         entity = self.entity_type(data=data, storage=storage)
@@ -305,25 +409,18 @@ class Nested(Field):
         super().__set__(instance, value)
 
 
-class Relationship(Field):
+class Relationship(_EntityRelationField):
     def __init__(
         self,
-        entity_type: str | type["Entity"],
+        entity_type: str | type["Entity"] | None = None,
         relation_type: t.Any = RelationType.RELATED,
-        many: bool = False,
+        many: bool | None = None,
     ):
         super().__init__(mode=AccessMode.GET)
 
         self._entity_type = entity_type
         self.relation_type = relation_type
         self.many = many
-
-    @property
-    def entity_type(self) -> type["Entity"]:
-        if isinstance(self._entity_type, str):
-            self._entity_type = registry.get(self._entity_type)
-
-        return self._entity_type
 
     def __get__(self, instance: "Entity", owner):
         if not instance:
@@ -374,12 +471,12 @@ class Relationship(Field):
                 )
 
 
-class KeyNested(Field):
+class KeyNested(_RelationField):
     def __init__(
         self,
         related_entity_field: Field | t.Any,
         back_relation: t.Any = False,
-        many: bool = False,
+        many: bool | None = None,
         mode: AccessMode = AccessMode.GET_SET_LOAD,
         default: t.Any | t.Callable[[], t.Any] = ...,
         origin: str | None = None,

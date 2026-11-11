@@ -8,7 +8,7 @@ class Address(Entity):
 
 class User(Entity):
     name: str
-    address: Address = Nested(entity_type=Address)
+    address: Address = Nested()
 
 
 storage = Storage()

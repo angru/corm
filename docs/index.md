@@ -19,11 +19,11 @@ from corm import Storage, Entity, Nested, Relationship
 class Address(Entity):
     street: str
     number: int
-    user: 'User' = Relationship(entity_type='User')
+    user: 'User' = Relationship()
 
 class User(Entity):
     name: str
-    address: Address = Nested(entity_type=Address, back_relation=True)
+    address: Address = Nested(back_relation=True)
 
 
 storage = Storage()
@@ -36,3 +36,7 @@ assert john.address.street == 'First'
 assert john.address.number == 1
 assert john.address.user is john
 ```
+
+`Nested` and `Relationship` infer the related entity from the field annotation.
+A list annotation such as `list[Address]` also infers `many=True`. You can still
+pass `entity_type=` and `many=` explicitly.

@@ -2,7 +2,7 @@ import sys
 import typing as t
 
 from corm import constants, registry
-from corm.fields import Field, Nested
+from corm.fields import Field, Nested, _RelationField
 
 if t.TYPE_CHECKING:
     from corm.storage import Storage
@@ -39,6 +39,11 @@ class EntityMeta(type):
             for attr_name, attr_value in attrs.items():
                 if isinstance(attr_value, Field):
                     fields[attr_name] = attr_value
+
+                    if isinstance(attr_value, _RelationField):
+                        attr_value._infer_from_annotation(
+                            annotations.get(attr_name, ...), f"{name}.{attr_name}"
+                        )
 
                     if attr_value.pk:
                         pk_fields.append(attr_value)

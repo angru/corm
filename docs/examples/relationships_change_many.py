@@ -3,16 +3,12 @@ from corm import Entity, Nested, Relationship, Storage
 
 class Address(Entity):
     street: str
-    user: "User" = Relationship(entity_type="User")
+    user: "User" = Relationship()
 
 
 class User(Entity):
     id: int
-    addresses: list[Address] = Nested(
-        entity_type=Address,
-        back_relation=True,
-        many=True,
-    )
+    addresses: list[Address] = Nested(back_relation=True)
 
 
 storage = Storage()
