@@ -3,12 +3,12 @@ from corm import Entity, Nested, Relationship, Storage
 
 class Address(Entity):
     street: str
-    user: "User" = Relationship()
+    user: "User | None" = Relationship()
 
 
 class User(Entity):
     id: int
-    address: Address = Nested(back_relation=True)
+    address: Address | None = Nested(back_populates="user")
 
 
 storage = Storage()
@@ -32,5 +32,18 @@ address = Address(data={"street": "lenina"}, storage=storage)
 john.address = address
 
 assert old_address.user is None
-assert address.user == john
+assert address.user is john
 assert john.address is address
+
+jane = User({"id": 2, "address": {"street": "First"}}, storage)
+displaced = jane.address
+address.user = jane
+
+assert john.address is None
+assert jane.address is address
+assert address.user is jane
+assert displaced.user is None
+
+address.user = None
+assert jane.address is None
+assert address.user is None

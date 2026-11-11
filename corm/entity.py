@@ -2,7 +2,7 @@ import sys
 import typing as t
 
 from corm import constants, registry
-from corm.fields import Field, Nested, _RelationField
+from corm.fields import Field, Nested, _OwningRelationField, _RelationField
 
 if t.TYPE_CHECKING:
     from corm.storage import Storage
@@ -62,6 +62,12 @@ class EntityMeta(type):
                     fields[attr_name] = Field()
 
         attrs["__fields__"] = fields
+        attrs["_paired_fields"] = tuple(
+            field
+            for field in fields.values()
+            if isinstance(field, _OwningRelationField)
+            and field.back_populates is not None
+        )
 
         if pk_fields:
             attrs["__pk_fields__"] = pk_fields
@@ -88,10 +94,14 @@ class Entity(metaclass=EntityMeta):
     __pk_fields__: list[Field] | None = None
     __fields__: dict[str, Field]
     _field_load_groups: tuple[tuple[Field, ...], tuple[Field, ...]]
+    _paired_fields: tuple[_OwningRelationField, ...]
 
     def __init__(self, data: t.Any, storage: "Storage"):
         self._data = data
         self.storage = storage
+
+        for field in self._paired_fields:
+            field._resolve_pair()
 
         pk_fields = self.__pk_fields__
         if pk_fields:

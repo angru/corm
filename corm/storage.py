@@ -138,6 +138,15 @@ class Storage:
         relations = self._relations.get(entity, {})
         return relations.get((related_entity_type, relation_type), {})
 
+    def _reorder_relations(self, entity, relation_type, ordered_targets):
+        relations = self._relations[entity]
+        for target in ordered_targets:
+            key = _relation_key(target)
+            target_type = type(target)
+            for entity_type in (target_type, *_relation_base_types(target_type)):
+                bucket = relations[entity_type, relation_type]
+                bucket[key] = bucket.pop(key)
+
     def get_related_entities(
         self,
         entity: Entity | EntityRef,

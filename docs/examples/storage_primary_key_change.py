@@ -8,7 +8,7 @@ class User(Entity):
 
 class Address(Entity):
     user: User | None = KeyNested(
-        User.id, origin="user_id", back_relation=True, required=False
+        User.id, origin="user_id", back_populates="addresses", required=False
     )
 
 
@@ -26,4 +26,4 @@ assert storage.get(User.id, 5) is user
 assert old_address.user is None
 assert old_address.dict() == {"user_id": 1}
 assert new_address.user is user
-assert new_address in user.addresses
+assert user.addresses == [new_address]
