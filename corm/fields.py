@@ -165,7 +165,10 @@ class Field:
     def __set__(self, instance: "Entity", value):
         if instance:
             if self.mode & AccessMode.SET:
-                instance._data[self.origin] = value
+                if self.pk:
+                    instance.storage._set_primary_key(instance, self, value)
+                else:
+                    instance._data[self.origin] = value
             else:
                 raise ValueError(f"Field '{self.name}' is read only")
         else:

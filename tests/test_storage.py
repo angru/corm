@@ -1,6 +1,6 @@
 import pytest
 
-from corm import Entity, Field, RelationType, Storage
+from corm import Entity, Field, Relationship, RelationType, Storage
 
 
 def test_add_by_primary_key():
@@ -14,6 +14,92 @@ def test_add_by_primary_key():
     )
 
     assert storage.get(User.id, 1) == john
+
+
+def test_change_primary_key():
+    class User(Entity):
+        id: int = Field(pk=True)
+
+    storage = Storage()
+    user = User({"id": 1}, storage)
+    user.id = 5
+    user.id = 5
+
+    assert user.id == 5
+    assert storage.get(User.id, 5) is user
+    assert storage.get(User.id, 1) is None
+
+
+def test_primary_key_conflict_leaves_storage_and_data_unchanged():
+    class User(Entity):
+        id: int = Field(pk=True)
+
+    storage = Storage()
+    user = User({"id": 1}, storage)
+    other = User({"id": 5}, storage)
+
+    with pytest.raises(ValueError) as insert_error:
+        User({"id": 5}, storage)
+    with pytest.raises(ValueError) as assignment_error:
+        user.id = 5
+
+    assert str(assignment_error.value) == str(insert_error.value)
+    assert user.id == 1
+    assert other.id == 5
+    assert storage.get(User.id, 1) is user
+    assert storage.get(User.id, 5) is other
+
+
+def test_change_one_of_two_primary_keys():
+    class User(Entity):
+        id: int = Field(pk=True, origin="user_id")
+        username: str = Field(pk=True)
+
+    storage = Storage()
+    user = User({"user_id": 1, "username": "john"}, storage)
+    user.id = 5
+
+    assert user.dict() == {"user_id": 5, "username": "john"}
+    assert storage.get(User.id, 1) is None
+    assert storage.get(User.id, 5) is user
+    assert storage.get(User.username, "john") is user
+
+
+def test_read_missing_relation_does_not_modify_storage():
+    class User(Entity):
+        pass
+
+    class Address(Entity):
+        street: str
+        user = Relationship(entity_type="User")
+        users = Relationship(entity_type="User", many=True)
+
+    storage = Storage()
+    address = Address({"street": "x"}, storage)
+    assert address.user is None
+    assert address.users == []
+    assert not storage._relations
+
+    user = User({}, storage)
+    storage.make_relation(address, user, RelationType.CHILD)
+    before = set(storage._relations[address])
+    assert address.user is None
+    assert address.users == []
+    assert set(storage._relations[address]) == before
+
+
+def test_get_related_entities_returns_a_new_list():
+    storage = Storage()
+    source = Entity({}, storage)
+    target = Entity({}, storage)
+    related = RelationType.RELATED
+    storage.make_relation(source, target, related)
+
+    result = storage.get_related_entities(source, Entity, related)
+    assert result == [target]
+    assert result is not storage.get_related_entities(source, Entity, related)
+    result.clear()
+    assert storage.get_related_entities(source, Entity, related) == [target]
 
 
 def test_make_relation():
@@ -99,6 +185,15 @@ def test_remove_relation():
         Address,
         RelationType.RELATED,
     ) == [address2]
+
+    storage.make_relation(user, address1, RelationType.RELATED)
+    with pytest.raises(ValueError, match="already exists"):
+        storage.make_relation(user, address2, RelationType.RELATED)
+
+    assert storage.get_related_entities(user, Address, RelationType.RELATED) == [
+        address2,
+        address1,
+    ]
 
 
 def test_remove_relations():
@@ -227,8 +322,11 @@ def test_remove_subclass_relations_from_all_lookups():
     assert storage.get_related_entities(team, Entity, related) == []
 
 
-def test_equal_targets_of_different_classes_are_distinct_relations():
+@pytest.mark.parametrize("hashable", [False, True])
+def test_equal_targets_of_different_classes_are_distinct_relations(hashable):
     class Member(Entity):
+        __hash__ = (lambda self: 0) if hashable else None
+
         def __eq__(self, other):
             return isinstance(other, Member)
 
@@ -243,7 +341,11 @@ def test_equal_targets_of_different_classes_are_distinct_relations():
     storage.make_relation(team, manager, related)
     storage.make_relation(team, member, related)
 
-    storage.remove_relation(team, member, related)
+    equal_member = Member({}, storage)
+    with pytest.raises(ValueError, match="already exists"):
+        storage.make_relation(team, equal_member, related)
+
+    storage.remove_relation(team, equal_member, related)
     (remaining,) = storage.get_related_entities(team, Member, related)
     assert remaining is manager
     assert storage.get_one_related_entity(team, Manager, related) is manager

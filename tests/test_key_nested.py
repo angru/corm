@@ -2,7 +2,15 @@ import typing as t
 
 import pytest
 
-from corm import Entity, Field, KeyManager, KeyNested, Relationship, Storage
+from corm import (
+    Entity,
+    Field,
+    KeyManager,
+    KeyNested,
+    Relationship,
+    RelationType,
+    Storage,
+)
 
 
 def test_nested_key():
@@ -229,8 +237,8 @@ def test_change_values():
     }
 
 
-@pytest.mark.skip(reason="Not implemented yet")
-def test_change_key_value():
+@pytest.mark.parametrize("required", [True, False])
+def test_old_key_reference_dangles_after_primary_key_change(required):
     class SomeEntity(Entity):
         id: int = Field(pk=True)
         name: str
@@ -238,14 +246,48 @@ def test_change_key_value():
     class EntityHolder(Entity):
         entity: SomeEntity = KeyNested(
             related_entity_field=SomeEntity.id,
+            required=required,
             origin="entity_id",
         )
 
     storage = Storage()
     entity = SomeEntity({"id": 123, "name": "entity"}, storage=storage)
     holder = EntityHolder({"entity_id": 123}, storage=storage)
+    assert holder.entity is entity
 
     entity.id = 321
 
-    assert holder.entity == entity
-    assert holder.dict() == {"entity_id": 321}
+    if required:
+        with pytest.raises(ValueError, match=r"Can't find .*123 in storage"):
+            holder.entity
+    else:
+        assert holder.entity is None
+    assert holder.dict() == {"entity_id": 123}
+
+
+def test_primary_key_change_attaches_pending_back_relations():
+    class Target(Entity):
+        id: int = Field(pk=True)
+        holders = Relationship(entity_type="Holder", many=True)
+
+    class Holder(Entity):
+        target = KeyNested(Target.id, back_relation=True, required=False)
+
+    class SpecialHolder(Holder):
+        pass
+
+    storage = Storage()
+    target = Target({"id": 1}, storage)
+    existing = Holder({"target": None}, storage)
+    target.holders.append(existing)
+    pending = SpecialHolder({"target": 5}, storage)
+    assert pending.target is None
+
+    target.id = 5
+
+    assert pending.target is target
+    assert target.holders == [existing, pending]
+    special_holders = storage.get_related_entities(
+        target, SpecialHolder, RelationType.RELATED
+    )
+    assert special_holders == [pending]
