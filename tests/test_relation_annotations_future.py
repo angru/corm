@@ -4,7 +4,7 @@ import typing
 
 import pytest
 
-from corm import Entity, Nested, Relationship, Storage, registry
+from corm import Entity, Nested, RegistryError, Relationship, Storage, registry
 
 
 def test_infer_from_postponed_annotations():
@@ -14,7 +14,9 @@ def test_infer_from_postponed_annotations():
         contacts: typing.List["Address"] = Relationship()  # noqa: UP006, UP037
         primary: models.Primary = Relationship()  # noqa: F821
 
-    with pytest.raises(KeyError, match=r"User\.contacts.*Unknown entity 'Address'"):
+    with pytest.raises(
+        RegistryError, match=r"User\.contacts.*Unknown entity 'Address'"
+    ):
         User.contacts.entity_type
 
     class Address(Entity):

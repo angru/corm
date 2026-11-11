@@ -3,7 +3,7 @@ import typing
 
 import pytest
 
-from corm import Entity, Field, KeyNested, Nested, Relationship, Storage
+from corm import Entity, Field, KeyNested, Nested, RegistryError, Relationship, Storage
 
 
 @pytest.mark.parametrize("field_type", [Nested, Relationship])
@@ -82,7 +82,7 @@ def test_infer_from_deferred_forward_refs():
         address: Address | None = Nested()  # noqa: F821
         addresses: list[Address] = Relationship()  # noqa: F821
 
-    with pytest.raises(KeyError, match=r"User\.address.*Unknown entity 'Address'"):
+    with pytest.raises(RegistryError, match=r"User\.address.*Unknown entity 'Address'"):
         User.address.entity_type
 
     class Address(Entity):

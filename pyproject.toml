@@ -26,6 +26,7 @@ classifiers = [
     "Intended Audience :: Information Technology",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
 
 [project.urls]
@@ -36,12 +37,16 @@ Issues = "https://github.com/angru/corm/issues"
 [tool.setuptools]
 packages = ["corm"]
 
+[tool.setuptools.package-data]
+corm = ["py.typed"]
+
 [dependency-groups]
 docs = [
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.8.1",
 ]
 lint = [
+    "mypy>=1.19.1",
     "pre-commit>=4.7.0",
     "ruff==0.17.4",
 ]

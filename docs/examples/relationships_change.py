@@ -26,6 +26,7 @@ john = User(
 
 old_address = john.address
 
+assert old_address is not None
 assert old_address.user is john
 
 address = Address(data={"street": "lenina"}, storage=storage)
@@ -37,6 +38,7 @@ assert john.address is address
 
 jane = User({"id": 2, "address": {"street": "First"}}, storage)
 displaced = jane.address
+assert displaced is not None
 address.user = jane
 
 assert john.address is None
