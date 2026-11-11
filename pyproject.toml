@@ -66,7 +66,7 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "PERF", "RUF"]
 exclude = ["*.md"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", ".github/scripts"]
 
 [tool.coverage.run]
 source = ["corm"]
