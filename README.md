@@ -142,6 +142,9 @@ Install the `docs`, `lint`, and `test` dependency groups with
 Run `uv run pre-commit run --all-files` for lint and formatting checks,
 `uv run pytest` for tests, and `uv run mkdocs build --strict` to build the docs.
 
+Run `uv run python -m benchmarks.dict_vs_corm` to compare dictionary and corm
+setup and traversal. See the [benchmark methodology](benchmarks/README.md).
+
 After editing `docs/examples/project.py`, refresh the README example with
 `uv run python .github/scripts/sync_readme_example.py`.
 

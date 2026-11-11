@@ -6,6 +6,9 @@ corm is designed for convenient navigation and editing of related data in
 memory. It is not optimized for speed. The storage keeps references to the
 entities it indexes and the entities in its relation index.
 
+The [benchmark](https://github.com/angru/corm/tree/master/benchmarks) measures
+setup and relationship traversal for dictionaries and corm entities.
+
 ## Does corm validate input?
 
 corm uses annotations for typed attribute access and relation inference. It
