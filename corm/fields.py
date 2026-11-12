@@ -1,8 +1,10 @@
 import ast
+import sys
 import typing as t
 import warnings
 from collections.abc import Hashable, Iterable
 from types import EllipsisType, NoneType, UnionType
+from weakref import getweakrefcount
 
 from corm import registry
 from corm.constants import AccessMode, RelationType
@@ -233,7 +235,36 @@ class NestedList(RelationshipList):
         return entity, self.entity
 
 
+_CAN_REUSE_LIST = (
+    sys.implementation.name == "cpython"
+    and getattr(sys, "_is_gil_enabled", lambda: True)()
+)
+
+
 class _PairedList(list["Entity"]):
+    @classmethod
+    def _get(cls, field, entity):
+        if not _CAN_REUSE_LIST:
+            return cls(field._read_paired_list(entity), field, entity)
+
+        views = entity._paired_list_views
+        if views is None:
+            entity._paired_list_views = views = {}
+
+        # Detach the slot before checking ownership. The only allowed references
+        # are the slot itself and the reference passed to getrefcount.
+        slot = views.pop(field, None)
+        if (
+            slot is None
+            or sys.getrefcount(slot[0]) != 2
+            or getweakrefcount(slot[0])
+            or not slot[0]._is_current()
+        ):
+            slot = (cls(field._read_paired_list(entity), field, entity),)
+        view = slot[0]
+        views[field] = slot
+        return view
+
     def __init__(self, items, field, entity):
         super().__init__(items)
         self._field = field
@@ -243,9 +274,12 @@ class _PairedList(list["Entity"]):
     def _remember_revision(self):
         self._revision = self._field._list_revision(self.entity, len(self))
 
+    def _is_current(self):
+        return self._revision == self._field._list_revision(self.entity, len(self))
+
     def _current_items(self):
         # Only the edited snapshot is refreshed after changes through another view.
-        if self._revision == self._field._list_revision(self.entity, len(self)):
+        if self._is_current():
             return self
         return list(self._field._read_paired_list(self.entity))
 
@@ -782,10 +816,9 @@ class Nested(_EntityRelationField, _OwningRelationField):
         return value
 
     def __get__(self, instance: "Entity", owner):
-        value = super().__get__(instance, owner)
         if instance and self.many and self.back_populates is not None:
-            return _PairedList(value, self, instance)
-        return value
+            return _PairedList._get(self, instance)
+        return super().__get__(instance, owner)
 
     def _read_paired_list(self, instance):
         return instance._data.get(self.origin) or ()
@@ -906,11 +939,10 @@ class Relationship(_EntityRelationField):
         field = self._owning_field
         if self.many:
             if field is not None:
-                entities = self._read_paired_list(instance)
-            else:
-                entities = instance.storage.get_related_entities(
-                    instance, self.entity_type, self.relation_type
-                )
+                return _ReverseList._get(self, instance)
+            entities = instance.storage.get_related_entities(
+                instance, self.entity_type, self.relation_type
+            )
             return _ReverseList(entities, self, instance)
 
         if field is not None:
@@ -1135,10 +1167,9 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
             return data
 
         if self.many:
-            items = self._get_many(instance)
             if self.back_populates is not None:
-                return _PairedList(items, self, instance)
-            return items
+                return _PairedList._get(self, instance)
+            return self._get_many(instance)
         else:
             key = self.key_manager.get(data)
             entity = self._lookup_target(instance.storage, key)

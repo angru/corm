@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 
 from corm import AccessMode, Entity, Field, KeyNested, Nested, Relationship, Storage
@@ -132,3 +134,57 @@ def test_key_append_refreshes_after_pending_key_resolves():
     assert pending.owners == last.owners == [owner]
     assert owner.dict() == {"targets": [1, 2, 3]}
     assert old_dump == {"targets": [1, 2]}
+
+
+@pytest.mark.skipif(
+    sys.implementation.name != "cpython"
+    or not getattr(sys, "_is_gil_enabled", lambda: True)(),
+    reason="requires CPython reference counts",
+)
+@pytest.mark.parametrize("reverse", [False, True], ids=["owning", "reverse"])
+def test_repeated_reads_reuse_unretained_list(models, reverse, monkeypatch):
+    Target, Owner, _ = models
+    storage = Storage()
+    target = Target({"id": 0}, storage)
+    owner = Owner({"targets": []}, storage)
+    field = Target.owners if reverse else Owner.targets
+    instance, attr = (target, "owners") if reverse else (owner, "targets")
+    items = (
+        [Owner({"targets": []}, storage) for _ in range(4)]
+        if reverse
+        else [Target({"id": i}, storage) for i in range(1, 5)]
+    )
+    reads = 0
+    original = field._read_paired_list
+
+    def read(entity):
+        nonlocal reads
+        reads += 1
+        return original(entity)
+
+    monkeypatch.setattr(field, "_read_paired_list", read)
+    for item in items[:2]:
+        getattr(instance, attr).append(item)
+    stale = getattr(instance, attr)
+    for item in items[2:]:
+        getattr(instance, attr).append(item)
+
+    assert getattr(instance, attr) == items
+    assert stale == items[:2]
+    assert reads == 2
+
+
+def test_fresh_reads_follow_same_size_replacement_and_reverse_reorder(models):
+    Target, Owner, _ = models
+    storage = Storage()
+    first, second = [Target({"id": i}, storage) for i in range(2)]
+    one, two = [Owner({"targets": []}, storage) for _ in range(2)]
+    one.targets = [first]
+    assert one.targets == [first]
+    one.targets = [second]
+    assert one.targets == [second]
+
+    second.owners.append(two)
+    assert second.owners == [one, two]
+    second.owners.reverse()
+    assert second.owners == [two, one]

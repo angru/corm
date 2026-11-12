@@ -1,4 +1,4 @@
-"""Measure appends on one list snapshot in each direction of a paired relation."""
+"""Measure paired append with repeated reads and with a retained list."""
 
 import argparse
 import gc
@@ -29,23 +29,30 @@ with warnings.catch_warnings():
         targets: list[Target] = Nested(back_relation=True)
 
 
-def measure(count, owner_type, reverse):
+def measure(count, owner_type, reverse, retained):
     storage = Storage()
     if reverse:
         target = Target({"id": 0}, storage)
         entities = [owner_type({"targets": []}, storage) for _ in range(count)]
-        view = target.key_owners if owner_type is KeyOwner else target.nested_owners
+        entity = target
+        attr = "key_owners" if owner_type is KeyOwner else "nested_owners"
     else:
         owner = owner_type({"targets": []}, storage)
         entities = [Target({"id": i}, storage) for i in range(count)]
-        view = owner.targets
+        entity, attr = owner, "targets"
 
+    if retained:
+        view = getattr(entity, attr)
     gc.collect()
     start = perf_counter()
-    for entity in entities:
-        view.append(entity)
+    if retained:
+        for item in entities:
+            view.append(item)
+    else:
+        for item in entities:
+            getattr(entity, attr).append(item)
     elapsed = perf_counter() - start
-    assert view == entities
+    assert getattr(entity, attr) == entities
     if reverse:
         assert all(owner.targets == [target] for owner in entities)
     elif owner_type is not LegacyOwner:
@@ -64,12 +71,14 @@ def main():
         for owner_type in (NestedOwner, KeyOwner, LegacyOwner):
             for reverse in (False, True) if owner_type is not LegacyOwner else (False,):
                 direction = "reverse" if reverse else "owning"
-                elapsed = measure(count, owner_type, reverse)
-                print(
-                    f"{count:>6} {owner_type.__name__:12} {direction:7}"
-                    f" {elapsed:.6f} s",
-                    flush=True,
-                )
+                for retained in (False, True):
+                    access = "retained" if retained else "fresh"
+                    elapsed = measure(count, owner_type, reverse, retained)
+                    print(
+                        f"{count:>6} {owner_type.__name__:12} {direction:7}"
+                        f" {access:8} {elapsed:.6f} s",
+                        flush=True,
+                    )
 
 
 if __name__ == "__main__":
