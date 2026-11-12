@@ -3,6 +3,45 @@ import pytest
 from corm import Entity, Field, Nested, Relationship, RelationType, Storage
 
 
+@pytest.mark.parametrize("paired", [False, True], ids=["unpaired", "paired"])
+@pytest.mark.parametrize("many", [False, True], ids=["single", "many"])
+@pytest.mark.parametrize("raw_none", [False, True], ids=["raw-value", "raw-none"])
+def test_dict_preserves_raw_relationship_key(paired, many, raw_none):
+    class Address(Entity):
+        street: str
+        if many:
+            user: list["User"] = Relationship()
+        else:
+            user: "User | None" = Relationship()
+
+    class User(Entity):
+        id: int
+        if paired:
+            address = Nested(Address, default=None, back_populates="user")
+
+    storage = Storage()
+    raw = {"street": "x", "user": None if raw_none else [42] if many else 42}
+    address = Address(raw.copy(), storage)
+    user = User({"id": 42}, storage)
+    empty = [] if many else None
+    related = [user] if many else user
+
+    assert address.dict() == raw
+    assert address.user == empty
+    assert address.dict() == raw
+    assert address.dict(strip_none=True) == raw
+
+    address.user = related
+    assert address.user == related
+    assert address.dict() == raw
+    assert address.dict(strip_none=True) == raw
+
+    address.user = empty
+    assert address.user == empty
+    assert address.dict() == raw
+    assert address.dict(strip_none=True) == raw
+
+
 def test_relationship():
     class SomeEntity(Entity):
         name: str
