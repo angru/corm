@@ -741,6 +741,8 @@ have separate reverse fields.</p>
 returns one owner or a list of owners. corm resolves the pair when the first
 owning entity is created, which allows forward references. Target subclasses
 can use the pair by inheriting its <code>Relationship</code>.</p>
+<p>When a redefined owner class takes over a <code>back_populates</code> pair, instances of
+the superseded class are stale and their behavior is undefined.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">corm</span><span class="w"> </span><span class="kn">import</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Nested</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">,</span> <span class="n">Storage</span>
 
 
