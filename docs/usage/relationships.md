@@ -31,6 +31,9 @@ returns one owner or a list of owners. corm resolves the pair when the first
 owning entity is created, which allows forward references. Target subclasses
 can use the pair by inheriting its `Relationship`.
 
+When a redefined owner class takes over a `back_populates` pair, instances of
+the superseded class are stale and their behavior is undefined.
+
 ```python
 --8<-- "docs/examples/relationships_bidirectional.py"
 ```

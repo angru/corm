@@ -418,6 +418,7 @@ class _RelationField(Field):
 
 class _EntityRelationField(_RelationField):
     _entity_type: str | type["Entity"] | None
+    _entity_type_name: str | None = None
 
     def _infer_from_annotation(self, annotation, field_name: str) -> None:
         if self._entity_type is not None:
@@ -443,6 +444,15 @@ class _EntityRelationField(_RelationField):
     @property
     def entity_type(self) -> type["Entity"]:
         entity_type = self._entity_type
+        resolved = self._resolve_entity_type(entity_type)
+        if isinstance(entity_type, str):
+            self._entity_type_name = entity_type
+            self._entity_type = resolved
+        return resolved
+
+    def _resolve_entity_type(
+        self, entity_type: str | type["Entity"] | None
+    ) -> type["Entity"]:
         if isinstance(entity_type, str):
             try:
                 entity_type = registry.get(entity_type)
@@ -451,7 +461,6 @@ class _EntityRelationField(_RelationField):
                     raise
                 field_name = f"{self.owner.__name__}.{self.name}"
                 raise RegistryError(f"{field_name}: {error}") from error
-            self._entity_type = entity_type
         if entity_type is None:
             raise ConfigurationError(f"{self} requires an entity_type or annotation")
         return entity_type
@@ -503,22 +512,37 @@ class _OwningRelationField(_RelationField):
             raise ConfigurationError(
                 f"Cannot pair {pair_name}: {target_name} is not a Relationship"
             )
-        if relationship._owning_field is not None:
-            other = relationship._owning_field
-            raise ConfigurationError(
-                f"Cannot pair {pair_name}: already paired with "
-                f"{other._declaring_owner.__name__}.{other.name}"
-            )
+        other = relationship._owning_field
+        owner = self._declaring_owner
+        entity_type_name = None
+        if other is not None:
+            other_owner = other._declaring_owner
+            if (
+                other_owner is owner
+                or other_owner.__module__ != owner.__module__
+                or other_owner.__qualname__ != owner.__qualname__
+                or other.name != self.name
+            ):
+                raise ConfigurationError(
+                    f"Cannot pair {pair_name}: already paired with "
+                    f"{other_owner.__name__}.{other.name}"
+                )
+            entity_type_name = relationship._entity_type_name
         try:
-            related_type = relationship.entity_type
+            if entity_type_name is None:
+                related_type = relationship.entity_type
+            else:
+                related_type = relationship._resolve_entity_type(entity_type_name)
         except RegistryError as error:
             raise RegistryError(f"Cannot pair {pair_name}: {error}") from error
-        if not issubclass(self._declaring_owner, related_type):
+        if not issubclass(owner, related_type):
             raise ConfigurationError(
                 f"Cannot pair {pair_name}: "
                 f"{target_name} refers to {related_type.__name__}"
             )
 
+        if entity_type_name is not None:
+            relationship._entity_type = related_type
         relationship._owning_field = self
         self._relationship = relationship
         return relationship
