@@ -2,7 +2,13 @@ import sys
 import typing as t
 
 from corm import constants, registry
-from corm.fields import Field, Nested, _OwningRelationField, _RelationField
+from corm.fields import (
+    Field,
+    Nested,
+    Relationship,
+    _OwningRelationField,
+    _RelationField,
+)
 
 if t.TYPE_CHECKING:
     from corm.storage import Storage
@@ -132,6 +138,8 @@ class Entity(metaclass=EntityMeta):
 
         # Writable fields without a load or dump representation are transient.
         for field in self.__fields__.values():
+            if isinstance(field, Relationship):
+                continue  # Relationships live in storage and leave raw data alone.
             if field.mode & constants.AccessMode.SET and not field.mode & (
                 constants.AccessMode.LOAD | constants.AccessMode.DUMP
             ):
