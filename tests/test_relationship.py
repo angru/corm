@@ -17,7 +17,7 @@ def test_dict_preserves_raw_relationship_key(paired, many, raw_none):
     class User(Entity):
         id: int
         if paired:
-            address = Nested(Address, back_populates="user")
+            address = Nested(Address, default=None, back_populates="user")
 
     storage = Storage()
     raw = {"street": "x", "user": None if raw_none else [42] if many else 42}
