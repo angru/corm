@@ -597,3 +597,120 @@ def test_paired_key_list_edits_keep_unresolved_keys():
     pending = Tag({"id": 9}, storage)
     assert pending.posts == [post]
     assert post.tags == [pending, other]
+
+
+def test_redefined_single_nested_owner_takes_over_pair():
+    class Address(Entity):
+        owner: "User | None" = Relationship()
+
+    def define():
+        class User(Entity):
+            address: Address | None = Nested(back_populates="owner")
+
+        return User
+
+    storage = Storage()
+    OriginalUser = define()
+    original = OriginalUser({"address": {}}, storage)
+    assert original.address.owner is original
+
+    User = define()
+    user = User({"address": {}}, storage)
+    assert user.address.owner is user
+    assert Address.owner.entity_type is User
+
+
+def test_redefined_many_nested_owner_supports_appends_on_both_sides():
+    class Address(Entity):
+        owners: list["User"] = Relationship()
+
+    def define():
+        class User(Entity):
+            addresses: list[Address] = Nested(back_populates="owners")
+
+        return User
+
+    storage = Storage()
+    OriginalUser = define()
+    OriginalUser({"addresses": [{}]}, storage)
+
+    User = define()
+    user = User({"addresses": [{}]}, storage)
+    assert user.addresses[0].owners == [user]
+    assert Address.owners.entity_type is User
+
+    first = Address({}, storage)
+    user.addresses.append(first)
+    assert first.owners == [user]
+
+    second = Address({}, storage)
+    second.owners.append(user)
+    assert user.addresses[-1] is second
+
+
+def test_redefined_key_nested_owner_takes_over_pair():
+    class Address(Entity):
+        id: int = Field(pk=True)
+        owner = Relationship("User")
+
+    def define():
+        class User(Entity):
+            address: Address | None = KeyNested(Address.id, back_populates="owner")
+
+        return User
+
+    storage = Storage()
+    address = Address({"id": 1}, storage)
+    OriginalUser = define()
+    original = OriginalUser({"address": 1}, storage)
+    assert address.owner is original
+
+    User = define()
+    user = User({"address": 1}, storage)
+    assert user.address is address
+    assert address.owner is user
+    assert Address.owner.entity_type is User
+
+
+def test_redefined_owner_and_target_pair_independently():
+    def define():
+        class Address(Entity):
+            owner: "User | None" = Relationship()
+
+        class User(Entity):
+            address: Address | None = Nested(back_populates="owner")
+
+        return User, Address
+
+    storage = Storage()
+    OriginalUser, OriginalAddress = define()
+    original = OriginalUser({"address": {}}, storage)
+    assert original.address.owner is original
+
+    User, Address = define()
+    user = User({"address": {}}, storage)
+    assert type(user.address) is Address
+    assert user.address.owner is user
+    assert OriginalAddress.owner.entity_type is OriginalUser
+
+
+def test_pair_resolution_rejects_reuse_by_different_owner_classes():
+    class Base(Entity):
+        pass
+
+    class Target(Entity):
+        owner: Base | None = Relationship()
+
+    class First(Base):
+        target: Target = Nested(back_populates="owner")
+
+    class Second(Base):
+        target: Target = Nested(back_populates="owner")
+
+    storage = Storage()
+    First({"target": {}}, storage)
+    with pytest.raises(
+        ValueError,
+        match=r"Second\.target.*Target\.owner.*already paired.*First\.target",
+    ):
+        Second({"target": {}}, storage)
