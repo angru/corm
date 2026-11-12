@@ -4,6 +4,7 @@ import typing as t
 from corm import constants, registry
 from corm.fields import (
     Field,
+    KeyNested,
     Nested,
     Relationship,
     _OwningRelationField,
@@ -11,6 +12,7 @@ from corm.fields import (
 )
 
 if t.TYPE_CHECKING:
+    from corm.fields import _PairedList
     from corm.storage import Storage
 
 if sys.version_info >= (3, 14):
@@ -102,10 +104,12 @@ class Entity(metaclass=EntityMeta):
     __fields__: dict[str, Field]
     _field_load_groups: tuple[tuple[Field, ...], tuple[Field, ...]]
     _paired_fields: tuple[_OwningRelationField, ...]
+    _paired_list_views: dict[Field, tuple["_PairedList"]] | None = None
 
     def __init__(self, data: dict[str, t.Any], storage: "Storage") -> None:
         self._data = data
         self.storage = storage
+        self._paired_list_revisions: dict[Field, int] = {}
 
         for paired_field in self._paired_fields:
             paired_field._resolve_pair()
@@ -140,6 +144,13 @@ class Entity(metaclass=EntityMeta):
         for field in self.__fields__.values():
             if isinstance(field, Relationship):
                 continue  # Relationships live in storage and leave raw data alone.
+            if (
+                isinstance(field, KeyNested)
+                and field.back_populates is not None
+                and field.many
+                and (items := data.get(t.cast(str, field.origin))) is not None
+            ):
+                data[t.cast(str, field.origin)] = list(items)
             if field.mode & constants.AccessMode.SET and not field.mode & (
                 constants.AccessMode.LOAD | constants.AccessMode.DUMP
             ):

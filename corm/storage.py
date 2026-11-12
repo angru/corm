@@ -15,7 +15,13 @@ class EntityRef(t.NamedTuple):
 
 _RelationTarget = Entity | EntityRef
 _TargetT = t.TypeVar("_TargetT", bound=_RelationTarget)
-_RelationBucket = dict[Hashable, _RelationTarget]
+
+
+class _RelationBucket(dict[Hashable, _RelationTarget]):
+    revision = 0
+
+
+_EMPTY_BUCKET = _RelationBucket()
 _RelationBuckets = defaultdict[tuple[type[object], Hashable], _RelationBucket]
 
 
@@ -62,8 +68,10 @@ def _relation_key(target: _RelationTarget) -> Hashable:
 class Storage:
     def __init__(self) -> None:
         self._entities: dict[EntityRef, Entity] = {}
+        self._key_additions = 0
+        self._key_moves = 0
         self._relations: defaultdict[_RelationTarget, _RelationBuckets] = defaultdict(
-            functools.partial(defaultdict, dict)
+            functools.partial(defaultdict, _RelationBucket)
         )
 
     def _check_primary_key(
@@ -84,6 +92,7 @@ class Storage:
             self._index_entity(key, entity)
 
     def _index_entity(self, key: EntityRef, entity: Entity) -> None:
+        self._key_additions += 1
         pending = self._relations.pop(key, None)
         if pending:
             current = self._relations.get(entity)
@@ -107,6 +116,7 @@ class Storage:
         move_key = old_key != new_key
         entity._data[origin] = value
         if move_key:
+            self._key_moves += 1
             del self._entities[old_key]
             self._index_entity(new_key, entity)
 
@@ -149,19 +159,22 @@ class Storage:
             )
 
         matches[key] = to_
+        matches.revision += 1
         for base in _relation_base_types(target_type):
-            relations[base, relation_type][key] = to_
+            bucket = relations[base, relation_type]
+            bucket[key] = to_
+            bucket.revision += 1
 
     def _get_relation_bucket(
         self,
-        entity: Entity | EntityRef,
+        entity: Entity | EntityRef | None,
         related_entity_type: type[object],
         relation_type: Hashable,
     ) -> _RelationBucket:
-        relations = self._relations.get(entity)
+        relations = self._relations.get(entity) if entity is not None else None
         if relations is None:
-            return {}
-        return relations.get((related_entity_type, relation_type), {})
+            return _EMPTY_BUCKET
+        return relations.get((related_entity_type, relation_type), _EMPTY_BUCKET)
 
     def _reorder_relations(
         self,
@@ -176,6 +189,7 @@ class Storage:
             for entity_type in (target_type, *_relation_base_types(target_type)):
                 bucket = relations[entity_type, relation_type]
                 bucket[key] = bucket.pop(key)
+                bucket.revision += 1
 
     def get_related_entities(
         self,
@@ -204,7 +218,11 @@ class Storage:
     ) -> None:
         target_type = type(to_)
         relations = self._relations.get(from_)
-        matches = relations.get((target_type, relation_type), {}) if relations else {}
+        matches = (
+            relations.get((target_type, relation_type), _EMPTY_BUCKET)
+            if relations
+            else _EMPTY_BUCKET
+        )
         key = _relation_key(to_)
         if relations is None or key not in matches:
             raise RelationError(
@@ -213,8 +231,11 @@ class Storage:
             )
 
         del matches[key]
+        matches.revision += 1
         for base in _relation_base_types(target_type):
-            del relations[base, relation_type][key]
+            bucket = relations[base, relation_type]
+            del bucket[key]
+            bucket.revision += 1
 
     def remove_relations(
         self,

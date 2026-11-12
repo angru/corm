@@ -1,8 +1,10 @@
 import ast
+import sys
 import typing as t
 import warnings
 from collections.abc import Hashable, Iterable
 from types import EllipsisType, NoneType, UnionType
+from weakref import getweakrefcount
 
 from corm import registry
 from corm.constants import AccessMode, RelationType
@@ -233,36 +235,89 @@ class NestedList(RelationshipList):
         return entity, self.entity
 
 
+_CAN_REUSE_LIST = (
+    sys.implementation.name == "cpython"
+    and getattr(sys, "_is_gil_enabled", lambda: True)()
+)
+
+
 class _PairedList(list["Entity"]):
+    @classmethod
+    def _get(cls, field, entity):
+        if not _CAN_REUSE_LIST:
+            return cls(field._read_paired_list(entity), field, entity)
+
+        views = entity._paired_list_views
+        if views is None:
+            entity._paired_list_views = views = {}
+
+        # Detach the slot before checking ownership. The only allowed references
+        # are the slot itself and the reference passed to getrefcount.
+        slot = views.pop(field, None)
+        if (
+            slot is None
+            or sys.getrefcount(slot[0]) != 2
+            or getweakrefcount(slot[0])
+            or not slot[0]._is_current()
+        ):
+            slot = (cls(field._read_paired_list(entity), field, entity),)
+        view = slot[0]
+        views[field] = slot
+        return view
+
     def __init__(self, items, field, entity):
         super().__init__(items)
         self._field = field
         self.entity = entity
+        self._remember_revision()
+
+    def _remember_revision(self):
+        self._revision = self._field._list_revision(self.entity, len(self))
+
+    def _is_current(self):
+        return self._revision == self._field._list_revision(self.entity, len(self))
+
+    def _current_items(self):
+        # Only the edited snapshot is refreshed after changes through another view.
+        if self._is_current():
+            return self
+        return list(self._field._read_paired_list(self.entity))
 
     def _edit(self, operation, *args, **kwargs):
         field, entity = self._field, self.entity
         items = list(field._read_paired_list(entity))
-        try:
-            result = operation(items, *args, **kwargs)
-        except ValueError as error:
-            if operation is list.remove:
-                raise RelationError(f"Relation does not exist for {field}") from error
-            raise
+        result = operation(items, *args, **kwargs)
         field._write_paired_list(entity, items)
-        super().__setitem__(slice(None), field._read_paired_list(entity))
+        list.__setitem__(self, slice(None), field._read_paired_list(entity))
+        self._remember_revision()
         return result
 
     def _belongs_to(self, field, entity):
         return self._field is field and self.entity is entity
 
     def append(self, entity):
-        self._edit(list.append, entity)
+        items = self._current_items()
+        added = self._field._append_paired_item(self.entity, entity)
+        if items is not self:
+            list.__setitem__(self, slice(None), items)
+        if added:
+            list.append(self, entity)
+        self._remember_revision()
 
     def extend(self, entities):
         self._edit(list.extend, entities)
 
     def remove(self, entity):
-        self._edit(list.remove, entity)
+        items = self._current_items()
+        try:
+            index = items.index(entity)
+        except ValueError as error:
+            raise RelationError(f"Relation does not exist for {self._field}") from error
+        self._field._remove_paired_item(self.entity, items[index])
+        if items is not self:
+            list.__setitem__(self, slice(None), items)
+        list.__delitem__(self, index)
+        self._remember_revision()
 
     def clear(self):
         self._edit(list.clear)
@@ -298,6 +353,19 @@ class _PairedList(list["Entity"]):
 class _ReverseList(_PairedList, RelationshipList):
     def __init__(self, items, field, entity):
         RelationshipList.__init__(self, entity, items, field.relation_type, field=field)
+        self._remember_revision()
+
+    def append(self, entity):
+        if self._field._owning_field is None:
+            RelationshipList.append(self, entity)
+        else:
+            super().append(entity)
+
+    def remove(self, entity):
+        if self._field._owning_field is None:
+            RelationshipList.remove(self, entity)
+        else:
+            super().remove(entity)
 
     def extend(self, entities):
         if self._field._owning_field is not None:
@@ -587,6 +655,21 @@ class _OwningRelationField(_RelationField):
             return ()
         return data if self.many else (data,)
 
+    def _list_revision(self, owner, size):
+        return owner._paired_list_revisions.get(self, 0)
+
+    def _mark_list_changed(self, owner):
+        if self.many:
+            revisions = owner._paired_list_revisions
+            revisions[self] = revisions.get(self, 0) + 1
+
+    def _append_paired_item(self, owner, target):
+        self._link(owner, self._prepare_target(owner, target))
+        return True
+
+    def _remove_paired_item(self, owner, target):
+        self._unlink(owner, self._source_for_target(target))
+
     def _replace_paired_data(self, owner, data, *, loading=False):
         relationship = self._resolve_pair()
         if not loading:
@@ -618,17 +701,50 @@ class _OwningRelationField(_RelationField):
             storage.make_relation(source, owner, self)
         if not loading:
             owner._data[self.origin] = data
+            self._mark_list_changed(owner)
 
     def _unlink(self, owner, source):
+        self._check_owner(owner)
         data = owner._data.get(self.origin)
-        remaining = [item for item in self._items(data) if self._source(item) != source]
-        self._replace_paired_data(owner, remaining if self.many else None)
+        if self.many:
+            for index, item in enumerate(data or ()):
+                if self._source(item) == source:
+                    owner.storage.remove_relation(source, owner, self)
+                    del data[index]
+                    break
+            else:
+                raise RelationError(f"Relation does not exist for {self}")
+        else:
+            owner.storage.remove_relation(source, owner, self)
+            owner._data[self.origin] = None
+        self._mark_list_changed(owner)
 
     def _link(self, owner, item):
-        if self.many:
-            data = owner._data.get(self.origin) or []
-            item = [*data, item]
-        self._replace_paired_data(owner, item)
+        if not self.many:
+            self._replace_paired_data(owner, item)
+            return
+
+        from corm.storage import _relation_key
+
+        self._check_owner(owner)
+        source = self._source(item)
+        storage = owner.storage
+        relationship = self._resolve_pair()
+        bucket = storage._get_relation_bucket(source, self._declaring_owner, self)
+        if _relation_key(owner) in bucket:
+            raise RelationError(f"Duplicate entities for {self}")
+        if not relationship.many:
+            old_owner = next(iter(bucket.values()), None)
+            if old_owner is not None:
+                self._unlink(old_owner, source)
+
+        storage.make_relation(source, owner, self)
+        data = owner._data.get(self.origin)
+        if data is None:
+            owner._data[self.origin] = [item]
+        else:
+            data.append(item)
+        self._mark_list_changed(owner)
 
     def _set_paired_value(self, owner, value):
         if self.many:
@@ -700,10 +816,9 @@ class Nested(_EntityRelationField, _OwningRelationField):
         return value
 
     def __get__(self, instance: "Entity", owner):
-        value = super().__get__(instance, owner)
         if instance and self.many and self.back_populates is not None:
-            return _PairedList(value, self, instance)
-        return value
+            return _PairedList._get(self, instance)
+        return super().__get__(instance, owner)
 
     def _read_paired_list(self, instance):
         return instance._data.get(self.origin) or ()
@@ -776,6 +891,41 @@ class Relationship(_EntityRelationField):
         self.many = many
         self._owning_field = None
 
+    def _list_revision(self, target, size):
+        field = self._owning_field
+        if field is not None:
+            source = field._source_for_target(target)
+            bucket = target.storage._get_relation_bucket(
+                source, field._declaring_owner, field
+            )
+            return field, source, bucket.revision
+
+    def _append_paired_item(self, target, owner):
+        from corm.storage import _relation_key
+
+        field = self._owning_field
+        source = field._source_for_target(target)
+        bucket = target.storage._get_relation_bucket(
+            source, field._declaring_owner, field
+        )
+        if _relation_key(owner) in bucket:
+            return False
+        self._check_paired_owner(target, owner)
+        field._link(owner, field._prepare_target(owner, target))
+        return True
+
+    def _remove_paired_item(self, target, owner):
+        field = self._owning_field
+        self._check_paired_owner(target, owner)
+        field._unlink(owner, field._source_for_target(target))
+
+    def _check_paired_owner(self, target, owner):
+        self._owning_field._check_owner(owner)
+        if owner.storage is not target.storage:
+            raise RelationError(
+                f"Related entities for {self} must use the same storage"
+            )
+
     def _read_paired_list(self, instance):
         field = self._owning_field
         return instance.storage.get_related_entities(
@@ -789,11 +939,10 @@ class Relationship(_EntityRelationField):
         field = self._owning_field
         if self.many:
             if field is not None:
-                entities = self._read_paired_list(instance)
-            else:
-                entities = instance.storage.get_related_entities(
-                    instance, self.entity_type, self.relation_type
-                )
+                return _ReverseList._get(self, instance)
+            entities = instance.storage.get_related_entities(
+                instance, self.entity_type, self.relation_type
+            )
             return _ReverseList(entities, self, instance)
 
         if field is not None:
@@ -861,11 +1010,7 @@ class Relationship(_EntityRelationField):
         added = [owner for key, owner in owners.items() if key not in current]
         removed = [owner for key, owner in current.items() if key not in owners]
         for owner in added + removed:
-            field._check_owner(owner)
-            if owner.storage is not target.storage:
-                raise RelationError(
-                    f"Related entities for {self} must use the same storage"
-                )
+            self._check_paired_owner(target, owner)
         prepared = [(owner, field._prepare_target(owner, target)) for owner in added]
 
         source = field._source_for_target(target)
@@ -995,6 +1140,8 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
         value = super().load(data, instance)
 
         if self.back_populates is not None:
+            if self.many and value is not None:
+                value = list(value)
             for item in self._items(value):
                 self._lookup_target(storage, self.key_manager.get(item))
             self._replace_paired_data(instance, value, loading=True)
@@ -1020,10 +1167,9 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
             return data
 
         if self.many:
-            items = self._get_many(instance)
             if self.back_populates is not None:
-                return _PairedList(items, self, instance)
-            return items
+                return _PairedList._get(self, instance)
+            return self._get_many(instance)
         else:
             key = self.key_manager.get(data)
             entity = self._lookup_target(instance.storage, key)
@@ -1034,6 +1180,16 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
                 )
 
             return entity
+
+    def _list_revision(self, owner, size):
+        storage = owner.storage
+        # Registering a target can only change a snapshot with unresolved keys.
+        pending = len(owner._data.get(self.origin) or ()) != size
+        return (
+            super()._list_revision(owner, size),
+            storage._key_moves,
+            storage._key_additions if pending else None,
+        )
 
     def _get_many(self, instance):
         result = []
