@@ -16,6 +16,9 @@ All notable changes to corm are documented here. The format follows
   ([#34](https://github.com/angru/corm/pull/34))
 - Automate PyPI publishing and GitHub Releases from version tags.
   ([#29](https://github.com/angru/corm/pull/29))
+- Add runnable documentation examples and benchmarks for document setup and
+  traversal. ([#35](https://github.com/angru/corm/pull/35),
+  [#36](https://github.com/angru/corm/pull/36))
 
 ### Changed
 
@@ -24,6 +27,10 @@ All notable changes to corm are documented here. The format follows
   ([#28](https://github.com/angru/corm/pull/28))
 - Expose `AccessMode` as a combinable `IntFlag`.
   ([#34](https://github.com/angru/corm/pull/34))
+- Update paired list relationships incrementally on append and remove.
+  Repeated `owner.targets.append(item)` calls can reuse unretained list views
+  on GIL-enabled CPython. Previously retained views and dictionary exports
+  keep their contents. ([#42](https://github.com/angru/corm/pull/42))
 
 ### Deprecated
 
@@ -47,3 +54,8 @@ All notable changes to corm are documented here. The format follows
 - Keep primary-key lookup in sync with key changes and keep relation reads
   from changing the index. Index relation membership while preserving order.
   ([#31](https://github.com/angru/corm/pull/31))
+- Preserve raw input keys that share a name with a `Relationship` field
+  when exporting an entity with `dict()`. ([#40](https://github.com/angru/corm/pull/40))
+- Allow a redefined owner class to take over its `back_populates` pair.
+  Instances of the previous class are stale after the handoff.
+  ([#41](https://github.com/angru/corm/pull/41))
