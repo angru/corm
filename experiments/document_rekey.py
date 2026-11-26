@@ -4,6 +4,7 @@ from copy import deepcopy
 from typing import cast
 
 from corm import DuplicateKeyError, Entity, KeyNested, Nested, RelationError, Storage
+from corm._rekey import _prepare_paired_key_move
 from docs.examples.storage_renumber_user import Directory, Group, MemberKey, User
 from experiments.reference_discovery import unpaired_references
 
@@ -25,20 +26,8 @@ def rekey(directory: Directory, user: User, new_id: int) -> None:
     if store.get(User.id, new_id) is not None:
         raise DuplicateKeyError(f"User ID {new_id} is occupied")
 
-    # Capture the reverse order while the old key still resolves. Prepare every
-    # replacement before writing, including conflicts in the last group.
     field = cast(KeyNested, Group.members)
-    manager = cast(MemberKey, field.key_manager)
-    changes = []
-    for group in user.groups:
-        records = list(group._data["members"])
-        for index, record in enumerate(records):
-            key = manager.get(deepcopy(record))
-            if key == new_id:
-                raise RelationError(f"Group already references user ID {new_id}")
-            if key == old_id:
-                records[index] = rewrite_record(manager, record, new_id)
-        changes.append((group, records))
+    paired = _prepare_paired_key_move(field, user, old_id, new_id)
 
     unpaired = {}
     for owner, relation, index in unpaired_references(directory, User.id, old_id):
@@ -58,18 +47,11 @@ def rekey(directory: Directory, user: User, new_id: int) -> None:
                 relation.key_manager, prepared[index], new_id
             )
 
-    old_source = field._key_source(old_id)
-    new_source = field._key_source(new_id)
-    # For this paired many-to-many schema each changed group moves one edge.
-    # Commit the prepared records without calling the key manager again.
+    # All manager callbacks and conflict checks have completed before writes.
     user.id = new_id
     for owner, origin, value in unpaired.values():
         owner._data[origin] = value
-    for group, records in changes:
-        store.remove_relation(old_source, group, field)
-        store.make_relation(new_source, group, field)
-        group._data["members"] = records
-        field._mark_list_changed(group)
+    paired.commit()
 
 
 def check():

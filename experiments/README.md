@@ -11,7 +11,9 @@ extra keys on each record survive the change.
 The two checked conflicts (an occupied ID or a duplicate membership, including
 a pending one) are rejected before any write. The experiment assumes exclusive
 access, a consistent graph, distinct source keys for the rewritten fields and
-one directory per store. The supported paired field is Group.members. Matching
+one directory per store. The experiment uses the internal paired-key move plan for Group.members; the
+plan supports scalar and list owners with scalar or list reverse fields.
+Matching
 unpaired fields with legacy reverse indexes raise before the commit.
 
 The example's `MemberKey.rewrite_key(record, new_key)` receives a deep copy
@@ -24,8 +26,10 @@ prepared copies, including changes to nested metadata in earlier groups.
 
 This protocol assumes plain copyable document data and callbacks whose writes
 are confined to their input. External side effects are outside its scope.
-Committing the prepared changes uses internal APIs specific to the directory's
-many-to-many group relation.
+The plan preserves destination pending owners for a many-valued reverse and
+rejects collisions for an exclusive reverse. It requires a stable, consistent
+graph between preparation and commit and does not discover paired fields or
+provide a general transaction. Legacy reverse indexes are unsupported.
 
 ## Discover unpaired owners before a rekey
 
