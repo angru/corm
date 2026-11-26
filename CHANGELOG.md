@@ -3,6 +3,13 @@
 All notable changes to corm are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+### Added
+
+- Omit top-level output keys with `entity.dict(exclude=["id"])`.
+  ([#7](https://github.com/angru/corm/issues/7))
+
 ## 0.0.4
 
 ### Added

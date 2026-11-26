@@ -1,6 +1,6 @@
 import pytest
 
-from corm import AccessMode, Entity, Field, Storage
+from corm import AccessMode, Entity, Field, Nested, Relationship, Storage
 
 
 def test_access_mode_values():
@@ -96,6 +96,36 @@ def test_origin_destination_setting():
         "_attr2": 2,
         "attr3_": 3,
     }
+
+
+def test_exclude_uses_top_level_output_keys():
+    class Child(Entity):
+        id: int
+
+    class Parent(Entity):
+        pk: int = Field(pk=True, origin="raw_id", destination="id")
+        children: list[Child] = Nested()
+        parents: list["Parent"] = Relationship()
+        optional: str | None = None
+
+    storage = Storage()
+    parent = Parent(
+        {"raw_id": 7, "children": [{"id": 1}], "extra": 9, "parents": "raw"},
+        storage,
+    )
+    original = parent.dict()
+    assert parent.dict(exclude=["raw_id", "pk", "missing"]) == original
+    assert parent.dict(True, exclude=("id", "extra", "parents")) == {
+        "children": [{"id": 1}]
+    }
+    assert parent.dict(exclude="children") == {
+        "id": 7,
+        "optional": None,
+        "extra": 9,
+        "parents": "raw",
+    }
+    assert parent.dict() == original
+    assert storage.get(Parent.pk, 7) is parent
 
 
 def test_default_values():

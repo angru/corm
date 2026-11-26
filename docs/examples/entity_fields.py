@@ -38,3 +38,8 @@ assert user.dict(strip_none=True) == {
     "timezone": "UTC",
     "metadata": None,
 }
+assert user.dict(strip_none=True, exclude=["id", "timezone"]) == {
+    "name": "Amina",
+    "description": "Project member",
+    "metadata": None,
+}

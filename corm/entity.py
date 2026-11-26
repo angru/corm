@@ -1,5 +1,6 @@
 import sys
 import typing as t
+from collections.abc import Iterable
 
 from corm import constants, registry
 from corm.fields import (
@@ -137,7 +138,9 @@ class Entity(metaclass=EntityMeta):
                 if value is not ...:
                     data[t.cast(str, field.origin)] = value
 
-    def dict(self, strip_none: bool = False) -> dict[str, t.Any]:
+    def dict(
+        self, strip_none: bool = False, *, exclude: Iterable[str] = ()
+    ) -> dict[str, t.Any]:
         data = self._data.copy()
 
         # Writable fields without a load or dump representation are transient.
@@ -172,4 +175,8 @@ class Entity(metaclass=EntityMeta):
 
                 data[t.cast(str, field.destination)] = value
 
+        if isinstance(exclude, str):
+            exclude = (exclude,)
+        for key in exclude:
+            data.pop(key, None)
         return data
