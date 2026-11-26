@@ -22,6 +22,10 @@ class MemberKey(KeyManager):
     def get(self, data):
         return data["user_id"]
 
+    def rewrite_key(self, record, new_key):
+        record["user_id"] = new_key
+        return record
+
     def prepare_to_set(self, entity):
         return {"user_id": entity.id}
 
