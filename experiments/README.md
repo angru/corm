@@ -47,3 +47,31 @@ remain discoverable via their reverse field. Keep raw indices only until the
 document changes. The executable scenario renumbers one user across a root,
 a paired group and two nested review lists. It also injects an exception on
 the final review record and checks the original export and indexes.
+
+## Enumerate indexed entities from a store
+
+Run `python -m experiments.entity_enumeration`. This research prototype adapts
+`benchmarks.query_scope.indexed_users` to accept an entity class. It scans the
+private primary-key index of one `Storage`, includes instances of subclasses,
+and yields each object once by identity even if it has several indexed keys.
+Only entities with at least one registered primary-key entry are discoverable;
+unkeyed entities, pending references and entities in other stores are absent.
+Iteration scans the live index. Collect it into a list to capture the result
+at a point in time. Do not mutate the index while consuming the iterator.
+
+Index order is the insertion order of the first surviving entry for each object,
+not a stable entity registration order. A key change removes and reinserts that
+entry: a single-key entity can move to the end, while another key can keep a
+multi-key entity in its earlier position. Moving its last original entry can
+then change its position. The executable checks these cases with `Storage.rekey`. These observations depend on private implementation details and
+are not a compatibility guarantee.
+
+The alternative sorts the enumerated snapshot by a caller-supplied key. A
+stable, unique key that does not change across rekeys gives repeatable ordering
+for the same set of entities. If keys tie, Python's stable sort preserves index
+order among ties, so their order can still change; changing the sort key or the
+set also changes the result. Scanning costs O(K) time for K index entries and
+O(U) identity memory for U matching objects. Sorting adds O(U log U) time and
+O(U) result space, plus the cost of computing keys. Index order avoids sorting
+and can yield incrementally, but still scans unrelated entries and keeps the
+identity set. Neither approach adds an index or changes normal index behavior.
