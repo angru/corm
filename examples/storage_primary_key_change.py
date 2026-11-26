@@ -18,6 +18,7 @@ new_address = Address({"user_id": 5}, storage)
 user = User({"id": 1}, storage)
 assert old_address.user is user
 assert new_address.user is None
+owners_to_update = list(user.addresses)
 
 user.id = 5
 
@@ -27,3 +28,10 @@ assert old_address.user is None
 assert old_address.dict() == {"user_id": 1}
 assert new_address.user is user
 assert user.addresses == [new_address]
+
+for address in owners_to_update:
+    address.user = user
+
+assert old_address.user is user
+assert old_address.dict() == {"user_id": 5}
+assert user.addresses == [new_address, old_address]
