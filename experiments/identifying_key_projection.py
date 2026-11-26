@@ -59,6 +59,7 @@ assert response == {
 }
 assert project.dict() == original
 assert store.get(User.id, 7) is user and task.assignee is user
+assert user.tasks == [task]
 
 # The full export reloads into a fresh store with the same internal identities.
 reloaded_store = Storage()
