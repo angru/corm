@@ -737,6 +737,9 @@
   (<a href="https://github.com/angru/corm/pull/34">#34</a>)</li>
 <li>Automate PyPI publishing and GitHub Releases from version tags.
   (<a href="https://github.com/angru/corm/pull/29">#29</a>)</li>
+<li>Add runnable documentation examples and benchmarks for document setup and
+  traversal. (<a href="https://github.com/angru/corm/pull/35">#35</a>,
+  <a href="https://github.com/angru/corm/pull/36">#36</a>)</li>
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
@@ -745,6 +748,10 @@
   (<a href="https://github.com/angru/corm/pull/28">#28</a>)</li>
 <li>Expose <code>AccessMode</code> as a combinable <code>IntFlag</code>.
   (<a href="https://github.com/angru/corm/pull/34">#34</a>)</li>
+<li>Update paired list relationships incrementally on append and remove.
+  Repeated <code>owner.targets.append(item)</code> calls can reuse unretained list views
+  on GIL-enabled CPython. Previously retained views and dictionary exports
+  keep their contents. (<a href="https://github.com/angru/corm/pull/42">#42</a>)</li>
 </ul>
 <h3 id="deprecated">Deprecated</h3>
 <ul>
@@ -768,6 +775,11 @@
 <li>Keep primary-key lookup in sync with key changes and keep relation reads
   from changing the index. Index relation membership while preserving order.
   (<a href="https://github.com/angru/corm/pull/31">#31</a>)</li>
+<li>Preserve raw input keys that share a name with a <code>Relationship</code> field
+  when exporting an entity with <code>dict()</code>. (<a href="https://github.com/angru/corm/pull/40">#40</a>)</li>
+<li>Allow a redefined owner class to take over its <code>back_populates</code> pair.
+  Instances of the previous class are stale after the handoff.
+  (<a href="https://github.com/angru/corm/pull/41">#41</a>)</li>
 </ul>
 
 
