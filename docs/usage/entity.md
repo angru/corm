@@ -36,6 +36,13 @@ in the exported data. A reverse `Relationship` lives in the relation index.
 `None`, including fields in declared nested entities. Undeclared keys with
 `None` values are preserved.
 
+Pass `exclude=["id", "timezone"]` to omit
+top-level keys from the exported dictionary. Use the emitted key (the
+`destination` for a field with `DUMP`). A single string names one key.
+Missing keys are ignored, and nested dictionaries keep their own keys.
+Calling `dict()` again returns the full export. This option was added
+after 0.0.4.
+
 The example reads an ID from `user_id`, exports it as `id`, and uses a
 read-only display name. It also shows an optional field and an undeclared key.
 
