@@ -164,3 +164,34 @@ def test_exclusive_pending_conflict_leaves_indexes_unchanged():
     assert group.lead is user and user.owner is group
     late = RekeyUser({"id": 5}, storage)
     assert pending_owner.lead is late and late.owner is pending_owner
+
+
+def test_incompatible_pending_target_rejected_without_writes():
+    class Base(Entity):
+        id = Field(pk=True)
+
+    class Target(Base):
+        owner: "Owner | None" = Relationship()
+
+    class Sibling(Base):
+        pass
+
+    class Owner(Entity):
+        target: Target | None = KeyNested(
+            Target.id, back_populates="owner", required=False
+        )
+
+    class Root(Entity):
+        target = Nested(Sibling)
+        owner = Nested(Owner)
+
+    store = Storage()
+    root = Root({"target": {"id": 1}, "owner": {"target": 5}}, store)
+    before = deepcopy(root.dict())
+    with pytest.raises(RelationError, match="Expected Target"):
+        store.rekey(root, root.target, Base.id, 5)
+    assert root.dict() == before
+    assert store.get(Base.id, 1) is root.target and store.get(Base.id, 5) is None
+    assert root.owner.target is None
+    late = Target({"id": 5}, store)
+    assert root.owner.target is late and late.owner is root.owner

@@ -27,6 +27,15 @@ class _PairedKeyMove:
             self.field._mark_list_changed(owner)
 
 
+def _rewrite_record(field, record, new_key):
+    replacement = field.key_manager.rewrite_key(deepcopy(record), new_key)
+    if replacement is None and not field.many:
+        raise RelationError(f"Expected a non-null key for {field}")
+    if field.key_manager.get(deepcopy(replacement)) != new_key:
+        raise ValueError("Rewritten reference has the wrong key")
+    return replacement
+
+
 def _prepare_paired_key_move(field, target, old_key, new_key):
     """Stage one paired KeyNested field; do not mutate the graph or indexes."""
     if not isinstance(field, KeyNested) or field.back_populates is None:
@@ -64,12 +73,7 @@ def _prepare_paired_key_move(field, target, old_key, new_key):
             if key == new_key:
                 raise RelationError(f"Owner already references destination for {field}")
             if key == old_key:
-                replacement = field.key_manager.rewrite_key(deepcopy(item), new_key)
-                if replacement is None and not field.many:
-                    raise RelationError(f"Expected a non-null key for {field}")
-                if field.key_manager.get(deepcopy(replacement)) != new_key:
-                    raise ValueError("Rewritten reference has the wrong key")
-                items[index] = replacement
+                items[index] = _rewrite_record(field, item, new_key)
                 rewritten += 1
         if rewritten != 1:
             raise RelationError(f"Inconsistent source index for {field}")
@@ -124,18 +128,16 @@ def rekey(storage, root, target, key_field, new_key):
         return
 
     # A source slot can only be rewritten through one descriptor.
-    slots = {}
     changes = []
-    paired_fields = set()
+    paired_fields = {}
 
     def claim(owner, field):
-        slot = (id(owner), field.origin)
-        aliases = [f for f in owner.__fields__.values() if f.origin == field.origin]
-        if any(f is not field for f in aliases) or (
-            slot in slots and slots[slot] is not field
+        field._check_writable(owner)
+        if any(
+            f is not field and f.origin == field.origin
+            for f in owner.__fields__.values()
         ):
             raise RelationError(f"Conflicting field aliases for {field}")
-        slots[slot] = field
 
     claim(target, key_field)
     for owner in entities:
@@ -160,15 +162,10 @@ def rekey(storage, root, target, key_field, new_key):
             if field.back_relation:
                 raise RelationError("Legacy reverse indexes are unsupported")
             if field.back_populates is not None:
-                paired_fields.add(field)
+                paired_fields[field] = None
                 continue
             for i in matches:
-                replacement = field.key_manager.rewrite_key(deepcopy(items[i]), new_key)
-                if replacement is None and not field.many:
-                    raise RelationError(f"Expected a non-null key for {field}")
-                if field.key_manager.get(deepcopy(replacement)) != new_key:
-                    raise ValueError("Rewritten reference has the wrong key")
-                items[i] = replacement
+                items[i] = _rewrite_record(field, items[i], new_key)
             changes.append((owner, field.origin, items if field.many else items[0]))
 
     # Include indexed paired fields even when all their owners are outside root.
@@ -177,10 +174,17 @@ def rekey(storage, root, target, key_field, new_key):
             isinstance(source, EntityRef)
             and isinstance(source.field, KeyNested)
             and source.field.related_entity_field is key_field
-            and source.key == old_key
             and source.field.back_populates is not None
+            and source.key in (old_key, new_key)
         ):
-            paired_fields.add(source.field)
+            field = source.field
+            if not storage._get_relation_bucket(source, field._declaring_owner, field):
+                continue
+            if source.key == new_key:
+                # Existing pending references must be able to resolve to this target.
+                field._check_target_relationship(target)
+            else:
+                paired_fields[field] = None
     plans = []
     for field in paired_fields:
         owners = storage.get_related_entities(

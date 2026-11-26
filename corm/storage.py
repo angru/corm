@@ -84,7 +84,7 @@ class Storage:
         return key
 
     def rekey(
-        self, root: Entity, target: Entity, field: Field, new_key: Hashable
+        self, root: Entity, target: Entity, field: object, new_key: Hashable
     ) -> None:
         """Rewrite a key and its references within a loaded document."""
         from corm._rekey import rekey
