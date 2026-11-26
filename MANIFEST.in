@@ -1,0 +1,5 @@
+include CHANGELOG.md mkdocs.yml uv.lock
+include .github/scripts/*.py
+recursive-include benchmarks *.md *.py
+recursive-include docs *.md *.py
+recursive-include tests *.py
