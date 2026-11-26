@@ -781,6 +781,12 @@ in the exported data. A reverse <code>Relationship</code> lives in the relation 
 <p><code>dict(strip_none=True)</code> omits declared fields with <code>DUMP</code> whose value is
 <code>None</code>, including fields in declared nested entities. Undeclared keys with
 <code>None</code> values are preserved.</p>
+<p>Pass <code>exclude=["id", "timezone"]</code> to omit
+top-level keys from the exported dictionary. Use the emitted key (the
+<code>destination</code> for a field with <code>DUMP</code>). A single string names one key.
+Missing keys are ignored, and nested dictionaries keep their own keys.
+Calling <code>dict()</code> again returns the full export. This option was added
+after 0.0.4.</p>
 <p>The example reads an ID from <code>user_id</code>, exports it as <code>id</code>, and uses a
 read-only display name. It also shows an optional field and an undeclared key.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">corm</span><span class="w"> </span><span class="kn">import</span> <span class="n">AccessMode</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">ReadOnlyFieldError</span><span class="p">,</span> <span class="n">Storage</span>
@@ -821,6 +827,11 @@ read-only display name. It also shows an optional field and an undeclared key.</
     <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Amina"</span><span class="p">,</span>
     <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Project member"</span><span class="p">,</span>
     <span class="s2">"timezone"</span><span class="p">:</span> <span class="s2">"UTC"</span><span class="p">,</span>
+    <span class="s2">"metadata"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="k">assert</span> <span class="n">user</span><span class="o">.</span><span class="n">dict</span><span class="p">(</span><span class="n">strip_none</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="p">[</span><span class="s2">"id"</span><span class="p">,</span> <span class="s2">"timezone"</span><span class="p">])</span> <span class="o">==</span> <span class="p">{</span>
+    <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Amina"</span><span class="p">,</span>
+    <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Project member"</span><span class="p">,</span>
     <span class="s2">"metadata"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">}</span>
 </code></pre></div>
