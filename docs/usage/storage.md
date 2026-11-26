@@ -76,6 +76,23 @@ Creating another entity with the same key on the same field raises
 the index entry. A conflicting assignment raises the same error and leaves
 the original key and index entry in place.
 
+## Finding the first matching entity
+
+Choose the collection to search. A Python generator can filter a document's
+nested users, including users without primary keys. `next(..., None)` returns
+the first match in collection order or `None` if the name is absent. Creating
+another user in the same store leaves the document's list unchanged.
+
+```python
+--8<-- "docs/examples/query_collection.py"
+```
+
+When the caller knows a primary key, `store.get(Member.id, 7)` goes directly
+to the identity index. An entity with two primary-key fields can be looked up
+through either field. A standalone user without a primary key has no entry in
+that index. For a name search, compare `user.name` on each instance. Comparing
+`User.name` to a string evaluates immediately to a boolean.
+
 ## Dangling key references
 
 A `KeyNested` field can be loaded before its target. Each read looks up the
