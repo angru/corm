@@ -50,9 +50,8 @@ the final review record and checks the original export and indexes.
 
 ## Enumerate indexed entities from a store
 
-Run `python -m experiments.entity_enumeration`. This research prototype adapts
-`benchmarks.query_scope.indexed_users` to accept an entity class. It scans the
-private primary-key index of one `Storage`, includes instances of subclasses,
+Run `python -m experiments.entity_enumeration`. This experiment uses `Storage.iter_entities` to scan the primary-key index
+of one `Storage`. It includes instances of subclasses,
 and yields each object once by identity even if it has several indexed keys.
 Only entities with at least one registered primary-key entry are discoverable;
 unkeyed entities, pending references and entities in other stores are absent.

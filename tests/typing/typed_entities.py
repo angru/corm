@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from typing import assert_type, reveal_type
 
 from corm import AccessMode, Entity, Field, KeyNested, Nested, Relationship, Storage
@@ -22,3 +23,5 @@ def check_types(user: User, storage: Storage) -> None:
     assert_type(user.mailing_address, Address)
     assert_type(user.mailing_address.residents, list[User])
     assert_type(storage.get(User.id, user.id), Entity | None)
+    assert_type(storage.iter_entities(User), Iterator[User])
+    assert_type(next(storage.iter_entities(Address)), Address)

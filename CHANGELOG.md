@@ -5,6 +5,11 @@ All notable changes to corm are documented here. The format follows
 
 ## Unreleased
 
+### Added
+
+- Add `Storage.iter_entities` to enumerate indexed entities by type.
+  ([#5](https://github.com/angru/corm/issues/5))
+
 ## 0.0.6
 
 ### Added
