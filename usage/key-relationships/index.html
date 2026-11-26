@@ -455,6 +455,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#keeping-metadata-when-a-list-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keeping metadata when a list changes
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -732,6 +743,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#keeping-metadata-when-a-list-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keeping metadata when a list changes
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -919,6 +941,83 @@ only what that method returns.</p>
 <span class="k">assert</span> <span class="n">team</span><span class="o">.</span><span class="n">members</span> <span class="o">==</span> <span class="p">[</span><span class="n">amina</span><span class="p">,</span> <span class="n">lee</span><span class="p">]</span>
 <span class="k">assert</span> <span class="n">team</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"member_refs"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"entity_id"</span><span class="p">:</span> <span class="mi">123</span><span class="p">},</span> <span class="p">{</span><span class="s2">"entity_id"</span><span class="p">:</span> <span class="mi">456</span><span class="p">}]}</span>
 </code></pre></div>
+<h2 id="keeping-metadata-when-a-list-changes">Keeping metadata when a list changes</h2>
+<p>Suppose two references to user 1 have ranks 10 and 11. Assigning a list
+containing just that user gives a key manager the same <code>User</code> object for
+either choice. If the caller needs to keep the rank-11 entry, model each
+reference as a nested entity with its own <code>rank</code> and a <code>KeyNested</code> link
+to the user. The caller can then select the exact membership to keep.
+An unresolved membership can also be kept explicitly until its user loads.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">corm</span><span class="w"> </span><span class="kn">import</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">KeyNested</span><span class="p">,</span> <span class="n">Nested</span><span class="p">,</span> <span class="n">Storage</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Membership</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="n">user</span><span class="p">:</span> <span class="n">User</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">KeyNested</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="s2">"entity_id"</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">rank</span><span class="p">:</span> <span class="nb">int</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Team</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="n">members</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Membership</span><span class="p">]</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">()</span>
+
+
+<span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+<span class="n">amina</span> <span class="o">=</span> <span class="n">User</span><span class="p">({</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span> <span class="n">storage</span><span class="p">)</span>
+<span class="n">lee</span> <span class="o">=</span> <span class="n">User</span><span class="p">({</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span> <span class="n">storage</span><span class="p">)</span>
+<span class="n">team</span> <span class="o">=</span> <span class="n">Team</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">"members"</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span><span class="s2">"entity_id"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"rank"</span><span class="p">:</span> <span class="mi">10</span><span class="p">},</span>
+            <span class="p">{</span><span class="s2">"entity_id"</span><span class="p">:</span> <span class="mi">9</span><span class="p">,</span> <span class="s2">"rank"</span><span class="p">:</span> <span class="mi">90</span><span class="p">},</span>
+            <span class="p">{</span><span class="s2">"entity_id"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"rank"</span><span class="p">:</span> <span class="mi">11</span><span class="p">},</span>
+        <span class="p">]</span>
+    <span class="p">},</span>
+    <span class="n">storage</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">first</span><span class="p">,</span> <span class="n">pending</span><span class="p">,</span> <span class="n">second</span> <span class="o">=</span> <span class="n">team</span><span class="o">.</span><span class="n">members</span>
+<span class="k">assert</span> <span class="n">first</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="n">second</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="n">amina</span>
+<span class="k">assert</span> <span class="n">pending</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="kc">None</span>
+
+<span class="n">new_member</span> <span class="o">=</span> <span class="n">Membership</span><span class="p">({</span><span class="s2">"entity_id"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"rank"</span><span class="p">:</span> <span class="mi">20</span><span class="p">},</span> <span class="n">storage</span><span class="p">)</span>
+<span class="n">team</span><span class="o">.</span><span class="n">members</span> <span class="o">=</span> <span class="p">[</span><span class="n">second</span><span class="p">,</span> <span class="n">new_member</span><span class="p">,</span> <span class="n">pending</span><span class="p">]</span>
+<span class="k">assert</span> <span class="n">team</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span>
+    <span class="s2">"members"</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span><span class="s2">"entity_id"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"rank"</span><span class="p">:</span> <span class="mi">11</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">"entity_id"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"rank"</span><span class="p">:</span> <span class="mi">20</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">"entity_id"</span><span class="p">:</span> <span class="mi">9</span><span class="p">,</span> <span class="s2">"rank"</span><span class="p">:</span> <span class="mi">90</span><span class="p">},</span>
+    <span class="p">]</span>
+<span class="p">}</span>
+<span class="k">assert</span> <span class="n">new_member</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="n">lee</span>
+<span class="n">late_user</span> <span class="o">=</span> <span class="n">User</span><span class="p">({</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">9</span><span class="p">},</span> <span class="n">storage</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">pending</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="n">late_user</span>
+</code></pre></div>
+<p>For an existing <code>list[User]</code> field backed by object-shaped keys, choose
+the operation according to the intended edit:</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Effect on the stored references</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Assign a plain list, e.g. <code>team.users = [lee, amina]</code></td>
+<td>Rebuilds the key objects through <code>prepare_to_set</code>. Drops old references absent from the replacement, including unresolved IDs.</td>
+</tr>
+<tr>
+<td>Edit a paired field, e.g. <code>team.users[:] = [lee, amina]</code></td>
+<td>With <code>back_populates</code> and <code>required=False</code>, keeps the old key objects for retained users and keeps unresolved references. New users get new key objects. Duplicate targets raise <code>RelationError</code>.</td>
+</tr>
+<tr>
+<td>Edit the result of an unpaired lookup, e.g. <code>team.users.reverse()</code></td>
+<td>Reorders a temporary list. The stored references keep their original order and metadata.</td>
+</tr>
+</tbody>
+</table>
 
 
 
