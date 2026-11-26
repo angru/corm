@@ -84,3 +84,15 @@ the operation according to the intended edit:
 | Assign a plain list, e.g. `team.users = [lee, amina]` | Rebuilds the key objects through `prepare_to_set`. Drops old references absent from the replacement, including unresolved IDs. |
 | Edit a paired field, e.g. `team.users[:] = [lee, amina]` | With `back_populates` and `required=False`, keeps the old key objects for retained users and keeps unresolved references. New users get new key objects. Duplicate targets raise `RelationError`. |
 | Edit the result of an unpaired lookup, e.g. `team.users.reverse()` | Reorders a temporary list. The stored references keep their original order and metadata. |
+
+### Rewriting a stored key
+
+A custom `KeyManager` can opt in to key rewriting by implementing
+`rewrite_key(record, new_key)`. The caller passes a detached copy of the
+stored record. The method returns a record whose `get()` value is `new_key`,
+preserves the other fields, and confines any in-place edits to the copy.
+The standard key manager returns the new key directly. Custom managers that
+leave the method unimplemented continue to support normal reads and writes.
+
+This method prepares one record. The document rekey experiment uses it before
+applying any changes to the graph.

@@ -4,14 +4,11 @@ from copy import deepcopy
 from typing import cast
 
 from corm import DuplicateKeyError, Entity, KeyNested, Nested, RelationError, Storage
-from corm.fields import DefaultKeyManager
 from docs.examples.storage_renumber_user import Directory, Group, MemberKey, User
 from experiments.reference_discovery import unpaired_references
 
 
 def rewrite_record(manager, record, new_id):
-    if type(manager) is DefaultKeyManager:
-        return new_id
     rewritten = manager.rewrite_key(deepcopy(record), new_id)
     if manager.get(deepcopy(rewritten)) != new_id:
         raise ValueError("Rewritten reference has the wrong key")

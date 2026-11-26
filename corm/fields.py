@@ -105,6 +105,14 @@ class KeyManager:
     def prepare_to_set(self, entity: "Entity | None") -> t.Any:
         raise NotImplementedError
 
+    def rewrite_key(self, record: t.Any, new_key: Hashable) -> t.Any:
+        """Return a detached reference record with its key replaced.
+
+        The caller supplies a copy. Preserve other fields and confine edits to
+        that copy. The returned record must resolve to new_key through get().
+        """
+        raise NotImplementedError("This key manager does not support rewriting keys")
+
 
 class DefaultKeyManager(KeyManager):
     def __init__(self, field: "Field") -> None:
@@ -116,6 +124,9 @@ class DefaultKeyManager(KeyManager):
     def prepare_to_set(self, entity: "Entity | None") -> t.Any:
         if entity:
             return getattr(entity, self.field.name)
+
+    def rewrite_key(self, record: t.Any, new_key: Hashable) -> Hashable:
+        return new_key
 
 
 _RelationParams = t.ParamSpec("_RelationParams")
