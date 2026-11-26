@@ -5,6 +5,19 @@ All notable changes to corm are documented here. The format follows
 
 ## Unreleased
 
+## 0.1.0
+
+The library API and behavior from 0.0.7 carry forward into 0.1.0. The
+release audit verified the following public contracts:
+
+- Paired relationships via `back_populates` and continued support for
+  deprecated `back_relation` declarations.
+- Document-scoped `Storage.rekey()` with conflict checks before writes.
+- Typed `Storage.iter_entities()` with subclass inclusion, identity
+  deduplication and unspecified iteration order.
+- Persistent `append()` on unpaired `KeyNested` lists, preserving existing
+  records and unresolved references.
+
 ## 0.0.7
 
 ### Added
