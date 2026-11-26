@@ -23,6 +23,28 @@ attribute name. `destination` is the key used by `dict()` and defaults to
 the origin. Load the export with a model that expects the destination key, or
 map it back before reloading with the same model.
 
+## Filtering input before construction
+
+To drop import-only data, filter the source keys before calling the entity
+constructor. Copy retained nested values if the caller needs to reuse the
+original payload. corm wraps those dictionaries in place.
+
+| Source key removed in this example | Result |
+| --- | --- |
+| Undeclared `import_batch` | The member and its badge load. The extra key is absent from the export. |
+| Optional `badges` | The field takes its empty-list default. The export includes `badges: []`, and the store contains no badge. |
+| Required primary key `id` | Construction raises `MissingFieldError` before loading the badge. |
+| Required `display_name` (exported as `name`) | Construction raises `MissingFieldError`. The badge loaded earlier is already registered in the supplied store. |
+
+For an independent document that must load as a unit, construct it in a fresh
+store and keep that store only after the constructor succeeds. To keep an ID
+available for lookups and omit it only from a response, see
+[Access and export](#access-and-export).
+
+```python
+--8<-- "docs/examples/entity_input_projection.py"
+```
+
 ## Access and export
 
 `Field` and `Nested` default to `AccessMode.ALL`. Combine `AccessMode` flags
