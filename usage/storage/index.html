@@ -451,6 +451,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#copy-a-document-into-another-store" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Copy a document into another store
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#primary-keys" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -700,6 +711,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#copy-a-document-into-another-store" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Copy a document into another store
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#primary-keys" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -807,6 +829,71 @@ the same mutable <code>Storage</code> after the parent resets its binding. Reset
 parent's context cannot undo writes the child makes to that store.</p>
 <p>The <a href="../../recipes/fastapi/">FastAPI recipe</a> shows the same ownership rule
 in a web request.</p>
+<h2 id="copy-a-document-into-another-store">Copy a document into another store</h2>
+<p>To edit an independent copy, export the document root, deep-copy the
+payload, and load it into a fresh <code>Storage</code>. Include the owners and targets
+of the links you want to rebuild. In this example each board contains its
+own user 7 and ticket. Editing the copied ticket's labels leaves the
+original list intact. The deep copy matters because ordinary mutable field
+values can be shared with the dictionary returned by <code>dict()</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">corm</span><span class="w"> </span><span class="kn">import</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">KeyNested</span><span class="p">,</span> <span class="n">Nested</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">,</span> <span class="n">Storage</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">tickets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="s2">"Ticket"</span><span class="p">]</span> <span class="o">=</span> <span class="n">Relationship</span><span class="p">()</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Ticket</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="n">owner</span><span class="p">:</span> <span class="n">User</span> <span class="o">=</span> <span class="n">KeyNested</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="s2">"owner_id"</span><span class="p">,</span> <span class="n">back_populates</span><span class="o">=</span><span class="s2">"tickets"</span><span class="p">)</span>
+    <span class="n">labels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Board</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="n">users</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">User</span><span class="p">]</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">()</span>
+    <span class="n">tickets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Ticket</span><span class="p">]</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">()</span>
+
+
+<span class="n">source</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+<span class="n">board</span> <span class="o">=</span> <span class="n">Board</span><span class="p">(</span>
+    <span class="p">{</span><span class="s2">"users"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">7</span><span class="p">}],</span> <span class="s2">"tickets"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"owner_id"</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span> <span class="s2">"labels"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"billing"</span><span class="p">]}]},</span>
+    <span class="n">source</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">destination</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+<span class="n">copied</span> <span class="o">=</span> <span class="n">Board</span><span class="p">(</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">board</span><span class="o">.</span><span class="n">dict</span><span class="p">()),</span> <span class="n">destination</span><span class="p">)</span>
+
+<span class="n">user</span><span class="p">,</span> <span class="n">ticket</span> <span class="o">=</span> <span class="n">board</span><span class="o">.</span><span class="n">users</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">board</span><span class="o">.</span><span class="n">tickets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">new_user</span><span class="p">,</span> <span class="n">new_ticket</span> <span class="o">=</span> <span class="n">copied</span><span class="o">.</span><span class="n">users</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">copied</span><span class="o">.</span><span class="n">tickets</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="k">assert</span> <span class="n">copied</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="o">==</span> <span class="n">board</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span>
+<span class="k">assert</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span> <span class="ow">is</span> <span class="n">user</span>
+<span class="k">assert</span> <span class="n">destination</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span> <span class="ow">is</span> <span class="n">new_user</span>
+<span class="k">assert</span> <span class="n">new_user</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">user</span> <span class="ow">and</span> <span class="n">new_ticket</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">ticket</span>
+<span class="k">assert</span> <span class="n">ticket</span><span class="o">.</span><span class="n">owner</span> <span class="ow">is</span> <span class="n">user</span> <span class="ow">and</span> <span class="n">user</span><span class="o">.</span><span class="n">tickets</span> <span class="o">==</span> <span class="p">[</span><span class="n">ticket</span><span class="p">]</span>
+<span class="k">assert</span> <span class="n">new_ticket</span><span class="o">.</span><span class="n">owner</span> <span class="ow">is</span> <span class="n">new_user</span> <span class="ow">and</span> <span class="n">new_user</span><span class="o">.</span><span class="n">tickets</span> <span class="o">==</span> <span class="p">[</span><span class="n">new_ticket</span><span class="p">]</span>
+
+<span class="n">new_ticket</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"reviewed"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">ticket</span><span class="o">.</span><span class="n">labels</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"billing"</span><span class="p">]</span>
+<span class="k">assert</span> <span class="n">new_ticket</span><span class="o">.</span><span class="n">labels</span> <span class="o">==</span> <span class="p">[</span><span class="s2">"billing"</span><span class="p">,</span> <span class="s2">"reviewed"</span><span class="p">]</span>
+</code></pre></div>
+<p>Use this recipe for dictionary data that the destination model can load.
+If a field exports under a different key from the one it accepts, map
+the keys before loading. A <code>KeyNested</code> reference exports its stored ID
+with the default access mode. Copying a ticket alone makes it look up that ID
+in the destination. Supply the intended user there before reading the
+required link. Reverse links from paired fields are rebuilt when their
+owning data is loaded. Recreate manually indexed links separately.</p>
+<p>A duplicate primary key raises <code>DuplicateKeyError</code>. In a multi-entity
+load, a child processed before the collision may already be indexed.
+If a failed import must leave a live graph intact, build the complete
+candidate in a fresh store, check the required links, and switch the
+application's root reference only after success. This replaces the graph
+with new Python objects. Existing references still point to the old ones.</p>
+<p>Assigning <code>entity.storage</code> changes the attribute while the original store
+still indexes the object. Calling <code>destination.add(entity)</code> can then leave
+the same object indexed in both stores. Use reconstruction when you need
+independent graphs.</p>
 <h2 id="primary-keys">Primary keys</h2>
 <p>Mark a field with <code>Field(pk=True)</code> to register each entity by that field and
 its value. <code>storage.get(User.id, 1)</code> returns the registered instance, or
