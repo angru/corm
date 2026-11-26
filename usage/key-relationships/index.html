@@ -877,7 +877,11 @@ key. Implement <code>get(data)</code> to extract the hashable key used by <code>
 an entity. A list relation calls these methods for each reference. Return
 <code>None</code> from <code>prepare_to_set(None)</code> for a cleared single reference.</p>
 <p>This example reads and writes team member references stored as objects such
-as <code>{"id": 123}</code>.</p>
+as <code>{"entity_id": 123}</code>. The reference key can differ from the primary-key
+field on the related entity. Loading and exporting keeps extra keys such as
+<code>rank</code> on the original reference. Replacing the whole list calls
+<code>prepare_to_set</code> for each assigned entity, so the new references contain
+only what that method returns.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">corm</span><span class="w"> </span><span class="kn">import</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">KeyManager</span><span class="p">,</span> <span class="n">KeyNested</span><span class="p">,</span> <span class="n">Storage</span>
 
 
@@ -887,13 +891,13 @@ as <code>{"id": 123}</code>.</p>
 
 <span class="k">class</span><span class="w"> </span><span class="nc">UserKeyManager</span><span class="p">(</span><span class="n">KeyManager</span><span class="p">):</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">data</span><span class="p">[</span><span class="s2">"entity_id"</span><span class="p">]</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">prepare_to_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entity</span><span class="p">:</span> <span class="n">Entity</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">entity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entity</span><span class="p">,</span> <span class="n">User</span><span class="p">)</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="n">entity</span><span class="o">.</span><span class="n">id</span><span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"entity_id"</span><span class="p">:</span> <span class="n">entity</span><span class="o">.</span><span class="n">id</span><span class="p">}</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">Team</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
@@ -905,15 +909,15 @@ as <code>{"id": 123}</code>.</p>
 <span class="n">storage</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
 <span class="n">amina</span> <span class="o">=</span> <span class="n">User</span><span class="p">({</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">123</span><span class="p">},</span> <span class="n">storage</span><span class="p">)</span>
 <span class="n">lee</span> <span class="o">=</span> <span class="n">User</span><span class="p">({</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">456</span><span class="p">},</span> <span class="n">storage</span><span class="p">)</span>
-<span class="n">team</span> <span class="o">=</span> <span class="n">Team</span><span class="p">({</span><span class="s2">"member_refs"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">123</span><span class="p">}]},</span> <span class="n">storage</span><span class="p">)</span>
+<span class="n">team</span> <span class="o">=</span> <span class="n">Team</span><span class="p">({</span><span class="s2">"member_refs"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"entity_id"</span><span class="p">:</span> <span class="mi">123</span><span class="p">,</span> <span class="s2">"rank"</span><span class="p">:</span> <span class="mi">1</span><span class="p">}]},</span> <span class="n">storage</span><span class="p">)</span>
 
 <span class="k">assert</span> <span class="n">team</span><span class="o">.</span><span class="n">members</span> <span class="o">==</span> <span class="p">[</span><span class="n">amina</span><span class="p">]</span>
-<span class="k">assert</span> <span class="n">team</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"member_refs"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">123</span><span class="p">}]}</span>
+<span class="k">assert</span> <span class="n">team</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"member_refs"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"entity_id"</span><span class="p">:</span> <span class="mi">123</span><span class="p">,</span> <span class="s2">"rank"</span><span class="p">:</span> <span class="mi">1</span><span class="p">}]}</span>
 
 <span class="n">team</span><span class="o">.</span><span class="n">members</span> <span class="o">=</span> <span class="p">[</span><span class="n">amina</span><span class="p">,</span> <span class="n">lee</span><span class="p">]</span>
 
 <span class="k">assert</span> <span class="n">team</span><span class="o">.</span><span class="n">members</span> <span class="o">==</span> <span class="p">[</span><span class="n">amina</span><span class="p">,</span> <span class="n">lee</span><span class="p">]</span>
-<span class="k">assert</span> <span class="n">team</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"member_refs"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">123</span><span class="p">},</span> <span class="p">{</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">456</span><span class="p">}]}</span>
+<span class="k">assert</span> <span class="n">team</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"member_refs"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"entity_id"</span><span class="p">:</span> <span class="mi">123</span><span class="p">},</span> <span class="p">{</span><span class="s2">"entity_id"</span><span class="p">:</span> <span class="mi">456</span><span class="p">}]}</span>
 </code></pre></div>
 
 
