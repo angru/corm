@@ -1146,6 +1146,13 @@ removing an owner through a reverse list updates that owner's field.</p>
 <span class="k">assert</span> <span class="n">jane</span><span class="o">.</span><span class="n">addresses</span> <span class="o">==</span> <span class="p">[]</span>
 <span class="k">assert</span> <span class="n">john</span><span class="o">.</span><span class="n">addresses</span> <span class="o">==</span> <span class="p">[</span><span class="n">old_address1</span><span class="p">]</span>
 </code></pre></div>
+<p>For an unpaired <code>KeyNested(..., many=True)</code>, <code>append(target)</code> persists the
+key manager’s stored representation and preserves existing records, including
+unresolved keys. Other list edits (including <code>extend</code>, removal, and item
+assignment) affect only the returned list; assign the field to replace its
+stored value. A previously fetched list remains a snapshot, but its <code>append</code>
+still adds to the current stored records. Legacy <code>back_relation</code> appends also
+create reverse links and reject duplicate links.</p>
 <p>The older <code>back_relation</code> parameter still works and emits a
 <code>DeprecationWarning</code>. To migrate, replace it with
 <code>back_populates="reverse_field_name"</code>.</p>
