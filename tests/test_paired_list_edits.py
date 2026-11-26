@@ -27,6 +27,21 @@ def models(request):
     return Target, Owner, ExclusiveOwner
 
 
+def test_revision_dictionary_is_allocated_on_first_edit(models):
+    Target, Owner, _ = models
+    storage = Storage()
+    target = Target({"id": 1}, storage)
+    owner, untouched = [Owner({"targets": []}, storage) for _ in range(2)]
+    snapshot = owner.targets
+    assert owner._paired_list_revisions is None
+    target.owners.append(owner)
+    assert owner._paired_list_revisions == {Owner.targets: 1}
+    snapshot.remove(target)
+    assert owner.targets == target.owners == []
+    assert owner._paired_list_revisions == {Owner.targets: 2}
+    assert untouched._paired_list_revisions is target._paired_list_revisions is None
+
+
 @pytest.mark.parametrize("reverse", [False, True], ids=["owning", "reverse"])
 def test_single_edits_use_incremental_updates(models, reverse, monkeypatch):
     Target, Owner, _ = models
