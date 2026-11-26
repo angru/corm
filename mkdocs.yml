@@ -1,4 +1,6 @@
 site_name: corm
+exclude_docs: |
+  **/__pycache__/**
 theme:
   name: material
 
@@ -12,6 +14,8 @@ nav:
       - usage/relationships.md
       - usage/key-relationships.md
       - usage/storage.md
+  - Recipes:
+      - Reassign a task with FastAPI: recipes/fastapi.md
   - Open feature requests: to-be-done.md
   - FAQ: faq.md
   - Changelog: changelog.md

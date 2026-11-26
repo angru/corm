@@ -30,3 +30,5 @@ Yes. Validate or structure your input first, then pass a dictionary from
 corm fields' `origin` settings. You can also pass `entity.dict()` back to
 your validation or structuring layer. corm wraps the dictionaries you pass in,
 so edits through corm update those dictionaries.
+
+For a runnable HTTP endpoint, see [Reassign a task with FastAPI](recipes/fastapi.md).
