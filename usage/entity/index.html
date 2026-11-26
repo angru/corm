@@ -929,7 +929,7 @@ top-level keys from the exported dictionary. Use the emitted key (the
 <code>destination</code> for a field with <code>DUMP</code>). A single string names one key.
 Missing keys are ignored, and nested dictionaries keep their own keys.
 Calling <code>dict()</code> again returns the full export. This option was added
-after 0.0.4.</p>
+in 0.0.5.</p>
 <p>The example reads an ID from <code>user_id</code>, exports it as <code>id</code>, and uses a
 read-only display name. It also shows an optional field and an undeclared key.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">corm</span><span class="w"> </span><span class="kn">import</span> <span class="n">AccessMode</span><span class="p">,</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">ReadOnlyFieldError</span><span class="p">,</span> <span class="n">Storage</span>
