@@ -646,6 +646,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#010" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#007" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -869,6 +880,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#010" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#007" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1070,6 +1092,18 @@
 <p>All notable changes to corm are documented here. The format follows
 <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>.</p>
 <h2 id="unreleased">Unreleased</h2>
+<h2 id="010">0.1.0</h2>
+<p>The library API and behavior from 0.0.7 carry forward into 0.1.0. The
+release audit verified the following public contracts:</p>
+<ul>
+<li>Paired relationships via <code>back_populates</code> and continued support for
+  deprecated <code>back_relation</code> declarations.</li>
+<li>Document-scoped <code>Storage.rekey()</code> with conflict checks before writes.</li>
+<li>Typed <code>Storage.iter_entities()</code> with subclass inclusion, identity
+  deduplication and unspecified iteration order.</li>
+<li>Persistent <code>append()</code> on unpaired <code>KeyNested</code> lists, preserving existing
+  records and unresolved references.</li>
+</ul>
 <h2 id="007">0.0.7</h2>
 <h3 id="added">Added</h3>
 <ul>
