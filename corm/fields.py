@@ -246,6 +246,39 @@ class NestedList(RelationshipList):
         return entity, self.entity
 
 
+class _UnpairedKeyList(list["Entity"]):
+    def __init__(self, items, field, owner):
+        super().__init__(items)
+        self._field = field
+        self._owner = owner
+
+    def append(self, target):
+        field, owner = self._field, self._owner
+        field._check_writable(owner)
+        if not isinstance(target, field.entity_type):
+            raise RelationError(f"Expected {field.entity_type.__name__} for {field}")
+        if target.storage is not owner.storage:
+            raise RelationError(
+                f"Related entities for {field} must use the same storage"
+            )
+        record = field.key_manager.prepare_to_set(target)
+        key = field.key_manager.get(record)
+        if owner.storage.get(field.related_entity_field, key) is not target:
+            raise RelationError(f"Expected a stored target for {field}")
+        records = [*(owner._data.get(field.origin) or ()), record]
+        records = [*(owner._data.get(field.origin) or ()), record]
+        if field.back_relation:
+            _apply_relation(
+                field,
+                owner.storage.make_relation,
+                from_=target,
+                to_=owner,
+                relation_type=field.back_relation,
+            )
+        owner._data[field.origin] = records
+        super().append(target)
+
+
 _CAN_REUSE_LIST = (
     sys.implementation.name == "cpython"
     and getattr(sys, "_is_gil_enabled", lambda: True)()
@@ -1184,7 +1217,7 @@ class KeyNested(_EntityRelationField, _OwningRelationField):
         if self.many:
             if self.back_populates is not None:
                 return _PairedList._get(self, instance)
-            return self._get_many(instance)
+            return _UnpairedKeyList(self._get_many(instance), self, instance)
         else:
             key = self.key_manager.get(data)
             entity = self._lookup_target(instance.storage, key)

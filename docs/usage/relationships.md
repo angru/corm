@@ -91,6 +91,14 @@ removing an owner through a reverse list updates that owner's field.
 --8<-- "docs/examples/relationships_change_many.py"
 ```
 
+For an unpaired `KeyNested(..., many=True)`, `append(target)` persists the
+key manager’s stored representation and preserves existing records, including
+unresolved keys. Other list edits (including `extend`, removal, and item
+assignment) affect only the returned list; assign the field to replace its
+stored value. A previously fetched list remains a snapshot, but its `append`
+still adds to the current stored records. Legacy `back_relation` appends also
+create reverse links and reject duplicate links.
+
 The older `back_relation` parameter still works and emits a
 `DeprecationWarning`. To migrate, replace it with
 `back_populates="reverse_field_name"`.
