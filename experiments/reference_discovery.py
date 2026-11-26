@@ -1,6 +1,7 @@
 """Locate stored unpaired key references in a single loaded document."""
 
 from collections.abc import Hashable, Iterator
+from copy import deepcopy
 from typing import NamedTuple
 
 from corm import Entity, KeyNested, Nested
@@ -36,7 +37,7 @@ def unpaired_references(
             ):
                 if field.many:
                     for index, record in enumerate(raw):
-                        if field.key_manager.get(record) == key:
+                        if field.key_manager.get(deepcopy(record)) == key:
                             yield Reference(owner, field, index)
-                elif field.key_manager.get(raw) == key:
+                elif field.key_manager.get(deepcopy(raw)) == key:
                     yield Reference(owner, field, None)

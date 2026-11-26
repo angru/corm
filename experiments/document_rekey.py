@@ -3,8 +3,19 @@
 from copy import deepcopy
 from typing import cast
 
-from corm import DuplicateKeyError, KeyNested, RelationError, Storage
+from corm import DuplicateKeyError, Entity, KeyNested, Nested, RelationError, Storage
+from corm.fields import DefaultKeyManager
 from docs.examples.storage_renumber_user import Directory, Group, MemberKey, User
+from experiments.reference_discovery import unpaired_references
+
+
+def rewrite_record(manager, record, new_id):
+    if type(manager) is DefaultKeyManager:
+        return new_id
+    rewritten = manager.rewrite_key(deepcopy(record), new_id)
+    if manager.get(deepcopy(rewritten)) != new_id:
+        raise ValueError("Rewritten reference has the wrong key")
+    return rewritten
 
 
 def rekey(directory: Directory, user: User, new_id: int) -> None:
@@ -29,20 +40,34 @@ def rekey(directory: Directory, user: User, new_id: int) -> None:
             if key == new_id:
                 raise RelationError(f"Group already references user ID {new_id}")
             if key == old_id:
-                rewritten = manager.rewrite_key(deepcopy(record), new_id)
-                if manager.get(deepcopy(rewritten)) != new_id:
-                    raise ValueError("Rewritten membership has the wrong key")
-                records[index] = rewritten
+                records[index] = rewrite_record(manager, record, new_id)
         changes.append((group, records))
 
-    update_lead = directory.lead is user
+    unpaired = {}
+    for owner, relation, index in unpaired_references(directory, User.id, old_id):
+        if relation.back_relation:
+            raise RelationError("Legacy reverse indexes need a separate update plan")
+        origin = relation.origin
+        slot = (id(owner), origin)
+        if slot not in unpaired:
+            raw = owner._data[origin]
+            unpaired[slot] = (owner, origin, list(raw) if relation.many else raw)
+        _, _, prepared = unpaired[slot]
+        if index is None:
+            value = rewrite_record(relation.key_manager, prepared, new_id)
+            unpaired[slot] = (owner, origin, value)
+        else:
+            prepared[index] = rewrite_record(
+                relation.key_manager, prepared[index], new_id
+            )
+
     old_source = field._key_source(old_id)
     new_source = field._key_source(new_id)
     # For this paired many-to-many schema each changed group moves one edge.
     # Commit the prepared records without calling the key manager again.
     user.id = new_id
-    if update_lead:
-        directory._data["lead_id"] = new_id
+    for owner, origin, value in unpaired.values():
+        owner._data[origin] = value
     for group, records in changes:
         store.remove_relation(old_source, group, field)
         store.make_relation(new_source, group, field)
@@ -104,5 +129,79 @@ def check():
     assert replacement.groups == []
 
 
+def check_nested_document():
+    class ReviewKey(MemberKey):
+        reject_rank = 2
+
+        def rewrite_key(self, record, new_key):
+            if record["rank"] == self.reject_rank:
+                record["labels"].clear()
+                raise ValueError("Rejected final reviewer")
+            return super().rewrite_key(record, new_key)
+
+    manager = ReviewKey()
+
+    class Review(Entity):
+        reviewers = KeyNested(
+            User.id,
+            origin="reviewer_ids",
+            many=True,
+            key_manager=manager,
+            required=False,
+        )
+
+    class ReviewDirectory(Directory):
+        reviews: list[Review] = Nested()
+
+    reviewers = [
+        {"user_id": key, "rank": rank, "labels": ["keep"]}
+        for rank, key in enumerate([1, 9, 1])
+    ]
+    store = Storage()
+    directory = ReviewDirectory(
+        {
+            "users": [{"id": 1}],
+            "lead_id": 1,
+            "groups": [{"members": [{"user_id": 1, "rank": 4}]}],
+            "reviews": [
+                {"reviewer_ids": reviewers},
+                {"reviewer_ids": [deepcopy(reviewers[0])]},
+            ],
+        },
+        store,
+    )
+    user = directory.lead
+    before = deepcopy(directory.dict())
+    try:
+        rekey(directory, user, 5)
+    except ValueError as error:
+        assert str(error) == "Rejected final reviewer"
+    else:
+        raise AssertionError("Expected the reviewer rewrite to fail")
+    assert directory.dict() == before
+    assert directory.lead is store.get(User.id, 1) is user
+    assert store.get(User.id, 5) is None
+    assert user.groups == directory.groups and directory.groups[0].members == [user]
+
+    manager.reject_rank = -1
+    rekey(directory, user, 5)
+    expected = deepcopy(before)
+    expected["users"][0]["id"] = expected["lead_id"] = 5
+    expected["groups"][0]["members"][0]["user_id"] = 5
+    for review in expected["reviews"]:
+        for record in review["reviewer_ids"]:
+            if record["user_id"] == 1:
+                record["user_id"] = 5
+    assert directory.dict() == expected
+    assert directory.lead is store.get(User.id, 5) is user
+    assert store.get(User.id, 1) is None
+    assert user.groups == directory.groups and directory.groups[0].members == [user]
+    first, second = directory.reviews
+    assert first.reviewers == [user, user] and second.reviewers == [user]
+    late = User({"id": 9}, store)
+    assert first.reviewers == [user, late, user]
+
+
 if __name__ == "__main__":
     check()
+    check_nested_document()
