@@ -74,3 +74,20 @@ O(U) identity memory for U matching objects. Sorting adds O(U log U) time and
 O(U) result space, plus the cost of computing keys. Index order avoids sorting
 and can yield incrementally, but still scans unrelated entries and keeps the
 identity set. Neither approach adds an index or changes normal index behavior.
+
+## Project a referenced identifying key
+
+Run `python -m experiments.identifying_key_projection`. Keep a required user ID
+in the loaded graph and use `user.dict(exclude={"id"})` when building the public
+response. The store lookup and incoming `KeyNested` reference still resolve to
+the same user, and the full export reloads into a fresh store. `exclude` uses
+output keys and applies only at the current entity's top level, so nested
+response projection must be assembled explicitly. A response without the ID is
+not reloadable as this model: the task still references the ID and the user
+requires it. Removing the ID before construction raises `MissingFieldError`.
+
+Construction is not transactional. In this ordering the task and its pending
+reference remain in the supplied store after the user fails to load; inserting
+the user later resolves that reference. Use a fresh, disposable store when a
+failed load must not affect an existing store. These results concern this
+required-key model and ordering; no defaulted or keyless model is implied.
