@@ -291,3 +291,99 @@ def test_primary_key_change_attaches_pending_back_relations():
         target, SpecialHolder, RelationType.RELATED
     )
     assert special_holders == [pending]
+
+
+def test_unpaired_append_preserves_records_and_pending_references():
+    class Target(Entity):
+        id: int = Field(pk=True)
+
+    class RecordKey(KeyManager):
+        def get(self, data):
+            return data["id"]
+
+        def prepare_to_set(self, entity):
+            return {"id": entity.id, "meta": {"new": True}}
+
+    class Owner(Entity):
+        targets: list[Target] = KeyNested(
+            Target.id,
+            origin="keys",
+            many=True,
+            key_manager=RecordKey(),
+            required=False,
+        )
+
+    storage = Storage()
+    first = Target({"id": 1}, storage)
+    second = Target({"id": 2}, storage)
+    records = [{"id": 1, "meta": {"old": [1]}}, {"id": 9}, {"id": 1}]
+    owner = Owner({"keys": records}, storage)
+    view = owner.targets
+    owner.targets.append(first)
+    view.append(second)
+    expected = [
+        *records,
+        {"id": 1, "meta": {"new": True}},
+        {"id": 2, "meta": {"new": True}},
+    ]
+    assert owner.dict() == {"keys": expected}
+    pending = Target({"id": 9}, storage)
+    assert owner.targets == [first, pending, first, first, second]
+    assert view == [first, first, second]
+
+
+def test_unpaired_append_rejects_invalid_targets_without_writes():
+    from corm import AccessMode, ReadOnlyFieldError, RelationError
+
+    class Target(Entity):
+        id: int = Field(pk=True)
+
+    class Owner(Entity):
+        targets: list[Target] = KeyNested(Target.id, many=True)
+        readonly: list[Target] = KeyNested(
+            Target.id, many=True, mode=AccessMode.GET_LOAD
+        )
+
+    storage = Storage()
+    target = Target({"id": 1}, storage)
+    foreign = Target({"id": 2}, Storage())
+    owner = Owner({"targets": [], "readonly": []}, storage)
+    view = owner.targets
+    for invalid in (object(), foreign):
+        with pytest.raises(RelationError):
+            view.append(invalid)
+    with pytest.raises(ReadOnlyFieldError):
+        owner.readonly.append(target)
+    target.id = 3
+    # A target whose key manager no longer points to it is also rejected.
+    target._data["id"] = 4
+    with pytest.raises(RelationError):
+        view.append(target)
+    assert owner.dict() == {"targets": [], "readonly": []}
+    assert view == []
+
+
+def test_legacy_unpaired_append_updates_reverse_and_rejects_duplicate():
+    from corm import RelationError
+
+    class Target(Entity):
+        id: int = Field(pk=True)
+        owners: list["Owner"] = Relationship()
+
+    class Owner(Entity):
+        targets: list[Target] = KeyNested(
+            Target.id, many=True, back_relation=True, required=False
+        )
+
+    storage = Storage()
+    owner = Owner({"targets": [9]}, storage)
+    target = Target({"id": 1}, storage)
+    view = owner.targets
+    view.append(target)
+    assert target.owners == [owner]
+    with pytest.raises(RelationError):
+        view.append(target)
+    assert owner.dict() == {"targets": [9, 1]}
+    assert view == [target]
+    pending = Target({"id": 9}, storage)
+    assert pending.owners == [owner]
