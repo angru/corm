@@ -53,7 +53,11 @@ an entity. A list relation calls these methods for each reference. Return
 `None` from `prepare_to_set(None)` for a cleared single reference.
 
 This example reads and writes team member references stored as objects such
-as `{"id": 123}`.
+as `{"entity_id": 123}`. The reference key can differ from the primary-key
+field on the related entity. Loading and exporting keeps extra keys such as
+`rank` on the original reference. Replacing the whole list calls
+`prepare_to_set` for each assigned entity, so the new references contain
+only what that method returns.
 
 ```python
 --8<-- "docs/examples/key_relationships_key_manager.py"
