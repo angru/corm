@@ -43,3 +43,30 @@ Times are medians of five batches of 20 calls, with construction excluded.
 For the unkeyed case the keyed scans search an empty index. The lifetime check
 drops the application list, counts live weak references with the store still
 alive, then drops the store. These users have no relationships.
+
+## Retained memory of a related graph
+
+Run `python -m benchmarks.graph_memory` from the checkout. Each sample loads
+20,000 tasks and 16 assignees into one project and checks traversal in both
+directions. Tracing starts before payload creation. The reported allocation
+count in bytes is taken with the graph alive after garbage collection.
+Descriptor resolution is warmed on a small graph first. Empty revision
+dictionaries are counted separately after tracing stops.
+
+To repeat the layout experiment, work in a disposable copy. Give all three
+entity classes in `benchmarks/dict_vs_corm.py` an empty `__slots__ = ()` and
+run the baseline. For the second run, also give the base `Entity` slots for
+`_data`, `storage`, `_paired_list_revisions`, `_paired_list_views` and
+`__weakref__`. Move the class default for `_paired_list_views` to
+`self._paired_list_views = None` in its constructor, leaving the annotation
+on the class. Run each layout in a fresh process with the same interpreter.
+
+| CPython 3.14.5, median of three samples | Retained bytes |
+| --- | ---: |
+| Ordinary base | 10,335,440 |
+| Slotted base and subclasses | 10,014,824 |
+
+Slots saved 320,616 bytes (3.1%) on this graph. Both layouts retained 20,017
+empty revision dictionaries with a combined shallow size of 1,281,088 bytes.
+This graph exercises a scalar paired owner and its reverse collection.
+A workload that edits owning many-valued fields can populate the dictionaries.
