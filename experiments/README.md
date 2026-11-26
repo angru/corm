@@ -91,3 +91,32 @@ reference remain in the supplied store after the user fails to load; inserting
 the user later resolves that reference. Use a fresh, disposable store when a
 failed load must not affect an existing store. These results concern this
 required-key model and ordering; no defaulted or keyless model is implied.
+
+## Reuse a person policy across nesting paths
+
+Run `python -m experiments.nested_transforms`. The boundary copies a directory,
+normalizes each Person's `personId` to its required `id`, then constructs the
+graph. The same rule runs for the scalar `primary` and each member of `people`.
+A `contact_id` KeyNested reference resolves to a loaded Person. Export copies
+the full document and applies one Person redaction rule to both paths; the
+store, original payload and full export retain the private notes and metadata.
+A Department and document metadata with the same field names are untouched.
+
+`person_positions` explicitly registers both paths and their cardinality. A new
+Person path, optional field, differently shaped container, source/output alias,
+subclass or independently exported root requires corresponding application code;
+raw dictionaries carry no entity type. KeyNested is a reference, not another
+embedded Person to transform: its key must still match the normalized identity.
+This fixed schema does not discover paths or handle arbitrary shared/cyclic data.
+The transform callbacks are assumed to affect only the copied data. A transform
+error at either path happens before construction and leaves the supplied store
+untouched; later constructor errors are not transactional. Output redaction is
+a response projection, not a guarantee that unknown sensitive fields are removed.
+
+Recommendation for #4: retain boundary transforms for known document schemas and
+revisit a built-in type-dispatched API when path registration becomes burdensome
+in a real application. #62's cattrs converter registers a root operation; it
+would also need traversal or explicit registrations to reach these raw nested
+positions. A generic solution needs defined type and subclass dispatch, traversal,
+ordering, alias and reference handling, and failure semantics before an API can
+be judged. This experiment does not establish those semantics or require hooks.
