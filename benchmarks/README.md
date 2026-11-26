@@ -29,3 +29,17 @@ outside the measured operations.
 
 To measure the single-target back-relation load from issue #23 in isolation,
 run `python -m benchmarks.relation_membership 8000 80000`.
+
+## Query scope
+
+Run `python -m benchmarks.query_scope` to reproduce the experiment for #5.
+Each case builds an application-owned list of 10,000 standalone users and
+searches for the last user's name. The prototype scans the private key index,
+includes subclasses and yields each Python object once. It compares an inline
+condition with a prebuilt field-equality predicate. A separate timing looks
+up the last ID directly through each declared primary-key field.
+
+Times are medians of five batches of 20 calls, with construction excluded.
+For the unkeyed case the keyed scans search an empty index. The lifetime check
+drops the application list, counts live weak references with the store still
+alive, then drops the store. These users have no relationships.
