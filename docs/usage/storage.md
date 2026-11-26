@@ -31,6 +31,39 @@ parent's context cannot undo writes the child makes to that store.
 The [FastAPI recipe](../recipes/fastapi.md) shows the same ownership rule
 in a web request.
 
+## Copy a document into another store
+
+To edit an independent copy, export the document root, deep-copy the
+payload, and load it into a fresh `Storage`. Include the owners and targets
+of the links you want to rebuild. In this example each board contains its
+own user 7 and ticket. Editing the copied ticket's labels leaves the
+original list intact. The deep copy matters because ordinary mutable field
+values can be shared with the dictionary returned by `dict()`.
+
+```python
+--8<-- "docs/examples/storage_copy_document.py"
+```
+
+Use this recipe for dictionary data that the destination model can load.
+If a field exports under a different key from the one it accepts, map
+the keys before loading. A `KeyNested` reference exports its stored ID
+with the default access mode. Copying a ticket alone makes it look up that ID
+in the destination. Supply the intended user there before reading the
+required link. Reverse links from paired fields are rebuilt when their
+owning data is loaded. Recreate manually indexed links separately.
+
+A duplicate primary key raises `DuplicateKeyError`. In a multi-entity
+load, a child processed before the collision may already be indexed.
+If a failed import must leave a live graph intact, build the complete
+candidate in a fresh store, check the required links, and switch the
+application's root reference only after success. This replaces the graph
+with new Python objects. Existing references still point to the old ones.
+
+Assigning `entity.storage` changes the attribute while the original store
+still indexes the object. Calling `destination.add(entity)` can then leave
+the same object indexed in both stores. Use reconstruction when you need
+independent graphs.
+
 ## Primary keys
 
 Mark a field with `Field(pk=True)` to register each entity by that field and
