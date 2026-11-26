@@ -15,6 +15,7 @@ class EntityRef(t.NamedTuple):
 
 _RelationTarget = Entity | EntityRef
 _TargetT = t.TypeVar("_TargetT", bound=_RelationTarget)
+_EntityT = t.TypeVar("_EntityT", bound=Entity)
 
 
 class _RelationBucket(dict[Hashable, _RelationTarget]):
@@ -131,6 +132,19 @@ class Storage:
     def get(self, field: object, entity_key: Hashable) -> Entity | None:
         # An annotated primary key looks like its value type on the class.
         return self._entities.get(EntityRef(field, entity_key))
+
+    def iter_entities(self, entity_type: type[_EntityT]) -> t.Iterator[_EntityT]:
+        """Iterate over indexed instances of a type, including subclasses.
+
+        Each object is yielded once by identity. Iteration scans the live
+        primary-key index in unspecified order; index-changing writes must not
+        overlap its consumption.
+        """
+        seen: set[int] = set()
+        for entity in self._entities.values():
+            if isinstance(entity, entity_type) and id(entity) not in seen:
+                seen.add(id(entity))
+                yield entity
 
     def make_key_relation(
         self,

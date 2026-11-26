@@ -76,6 +76,20 @@ Creating another entity with the same key on the same field raises
 the index entry. A conflicting assignment raises the same error and leaves
 the original key and index entry in place.
 
+## Enumerating indexed entities
+
+`store.iter_entities(User)` lazily yields instances of `User` and its
+subclasses registered in this store's primary-key index. Each object appears
+once by identity, even if it has multiple primary-key entries. Entities without
+an index entry and pending references are excluded.
+
+The iterator scans the live index. Index-changing writes, including adding
+entities or changing primary keys, must not overlap iteration. Result order is
+unspecified, including after rekeying. For repeatable ordering, use a stable,
+unique key, for example `sorted(store.iter_entities(User), key=lambda u: u.id)`
+when `id` meets those requirements. Collect the iterator into a list when a
+snapshot is needed.
+
 ## Finding the first matching entity
 
 Choose the collection to search. A Python generator can filter a document's

@@ -349,3 +349,53 @@ def test_equal_targets_of_different_classes_are_distinct_relations(hashable):
     (remaining,) = storage.get_related_entities(team, Member, related)
     assert remaining is manager
     assert storage.get_one_related_entity(team, Manager, related) is manager
+
+
+def test_iter_entities_indexes_identity_and_subclasses():
+    class Person(Entity):
+        def __eq__(self, other):
+            return isinstance(other, Person)
+
+        __hash__ = None
+
+    class Member(Person):
+        id: int = Field(pk=True)
+        alias: int = Field(pk=True)
+
+    class Other(Entity):
+        id: int = Field(pk=True)
+
+    storage = Storage()
+    first = Member({"id": 1, "alias": 10}, storage)
+    second = Member({"id": 2, "alias": 20}, storage)
+    Other({"id": 1}, storage)
+    Person({}, storage)
+    Member({"id": 3, "alias": 30}, Storage())
+
+    assert first == second and first is not second
+    assert {id(entity) for entity in storage.iter_entities(Person)} == {
+        id(first),
+        id(second),
+    }
+    assert len(list(storage.iter_entities(Member))) == 2
+    assert next(storage.iter_entities(Other)).id == 1
+    assert list(Storage().iter_entities(Person)) == []
+
+    first.id = 4
+    first.alias = 40
+    assert {id(entity) for entity in storage.iter_entities(Person)} == {
+        id(first),
+        id(second),
+    }
+
+
+def test_iter_entities_is_lazy_and_reads_live_index():
+    class User(Entity):
+        id: int = Field(pk=True)
+
+    storage = Storage()
+    iterator = storage.iter_entities(User)
+    user = User({"id": 1}, storage)
+    assert next(iterator) is user
+    with pytest.raises(StopIteration):
+        next(iterator)
