@@ -310,7 +310,7 @@ wheels = [
 
 [[package]]
 name = "corm"
-version = "0.0.6"
+version = "0.0.7"
 source = { editable = "." }
 
 [package.dev-dependencies]

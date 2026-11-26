@@ -5,6 +5,8 @@ All notable changes to corm are documented here. The format follows
 
 ## Unreleased
 
+## 0.0.7
+
 ### Added
 
 - Add `Storage.iter_entities` to enumerate indexed entities by type.
