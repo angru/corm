@@ -19,6 +19,32 @@ address fields through `user.address`.
 --8<-- "docs/examples/relationships_simple.py"
 ```
 
+## Models with the same name
+
+Suppose billing and support each define an `Account` class. Import both
+modules so their class definitions register with Corm, then give each
+`Nested` field its target's full name (`__module__` plus `__qualname__`).
+A string such as `"Account"`
+alone raises `RegistryError` when the field first resolves it and both
+classes are registered. The error lists the matching full names.
+
+```python
+--8<-- "docs/examples/qualified_relationships.py:load"
+```
+
+### Reloading a model module
+
+Reloading `account_models.billing` registers a new class under the same
+full name. The existing payer keeps its original class. An unpaired
+`Nested` field that already resolved its target caches that class, so
+even a new `Customer` loaded in a fresh `Storage` still uses the original
+billing class. A newly declared owner with a fresh `Nested` field resolves
+the replacement. The support class keeps its identity throughout.
+
+Run `uv run python docs/examples/qualified_relationships.py` from the
+repository root to exercise the two modules, the ambiguous short name
+and the reload.
+
 ## Bidirectional relationships
 
 Set `back_populates` on the `Nested` field to name the `Relationship` on
