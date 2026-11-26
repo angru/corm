@@ -464,6 +464,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Keeping metadata when a list changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rewriting-a-stored-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rewriting a stored key
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -780,6 +797,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Keeping metadata when a list changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rewriting-a-stored-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rewriting a stored key
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1046,6 +1080,15 @@ the operation according to the intended edit:</p>
 </tr>
 </tbody>
 </table>
+<h3 id="rewriting-a-stored-key">Rewriting a stored key</h3>
+<p>A custom <code>KeyManager</code> can opt in to key rewriting by implementing
+<code>rewrite_key(record, new_key)</code>. The caller passes a detached copy of the
+stored record. The method returns a record whose <code>get()</code> value is <code>new_key</code>,
+preserves the other fields, and confines any in-place edits to the copy.
+The standard key manager returns the new key directly. Custom managers that
+leave the method unimplemented continue to support normal reads and writes.</p>
+<p>This method prepares one record. The document rekey experiment uses it before
+applying any changes to the graph.</p>
 
 
 
