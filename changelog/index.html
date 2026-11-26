@@ -657,6 +657,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -686,7 +697,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -791,6 +802,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -820,7 +842,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -896,6 +918,15 @@
 <ul>
 <li>Omit top-level output keys with <code>entity.dict(exclude=["id"])</code>.
   (<a href="https://github.com/angru/corm/issues/7">#7</a>)</li>
+<li>Add runnable recipes for request-scoped storage, copying and renumbering a
+  document, and transforming input and output with FastAPI or cattrs.</li>
+</ul>
+<h3 id="changed">Changed</h3>
+<ul>
+<li>Allocate paired-list revision counters on the first edit. On CPython 3.14.5,
+  retained Python allocations fell by 13.9% in the read benchmark and 2.2% in
+  the benchmark that removes and restores each link.
+  (<a href="https://github.com/angru/corm/pull/65">#65</a>)</li>
 </ul>
 <h2 id="004">0.0.4</h2>
 <h3 id="added_1">Added</h3>
@@ -913,7 +944,7 @@
   traversal. (<a href="https://github.com/angru/corm/pull/35">#35</a>,
   <a href="https://github.com/angru/corm/pull/36">#36</a>)</li>
 </ul>
-<h3 id="changed">Changed</h3>
+<h3 id="changed_1">Changed</h3>
 <ul>
 <li>Require Python 3.11 or newer and test on Python 3.11 through 3.15. Use uv,
   Ruff, and pre-commit for development.
