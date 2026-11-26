@@ -56,14 +56,14 @@ private primary-key index of one `Storage`, includes instances of subclasses,
 and yields each object once by identity even if it has several indexed keys.
 Only entities with at least one registered primary-key entry are discoverable;
 unkeyed entities, pending references and entities in other stores are absent.
-It is a snapshot of index contents, not a document traversal or a public API.
-Do not mutate the index while consuming the iterator.
+Iteration scans the live index. Collect it into a list to capture the result
+at a point in time. Do not mutate the index while consuming the iterator.
 
 Index order is the insertion order of the first surviving entry for each object,
 not a stable entity registration order. A key change removes and reinserts that
 entry: a single-key entity can move to the end, while another key can keep a
-multi-key entity in its earlier position. The executable checks both cases with
-`Storage.rekey`. These observations depend on private implementation details and
+multi-key entity in its earlier position. Moving its last original entry can
+then change its position. The executable checks these cases with `Storage.rekey`. These observations depend on private implementation details and
 are not a compatibility guarantee.
 
 The alternative sorts the enumerated snapshot by a caller-supplied key. A

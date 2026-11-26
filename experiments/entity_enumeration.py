@@ -77,6 +77,10 @@ def main() -> None:
     assert index_order() == [b, c, a]  # C's alias entry still precedes A.
     assert stable_order() == [a, b, c]
     assert store.get(Contact.alias, 30) is c and store.get(Contact.id, 11) is c
+    store.rekey(root, c, Contact.alias, 31)
+    assert index_order() == [b, a, c]  # Neither of C's original entries remains.
+    assert stable_order() == [a, b, c]
+    assert store.get(Contact.alias, 31) is c and store.get(Contact.id, 11) is c
     print("Index order after rekeys:", [person.name for person in index_order()])
     print("Caller order after rekeys:", [person.name for person in stable_order()])
 
