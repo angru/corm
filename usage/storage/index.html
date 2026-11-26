@@ -495,6 +495,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#change-a-primary-key-and-its-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Change a primary key and its references
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#renumbering-a-referenced-entity" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -805,6 +816,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#change-a-primary-key-and-its-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Change a primary key and its references
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#renumbering-a-referenced-entity" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1025,7 +1047,7 @@ stored key in the same storage. If the key is missing, reading the field
 raises <code>EntityNotFoundError</code> with the default <code>required=True</code>. Set
 <code>required=False</code> to return <code>None</code> for an unresolved single reference or
 skip unresolved keys in a list. The stored keys remain in the data.</p>
-<p>Changing the target's primary key leaves existing references at their stored
+<p>Assigning a primary key through the entity attribute leaves existing references at their stored
 values. The example shows the old reference becoming unresolved and a
 reference waiting for the new key resolving to the same user.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">corm</span><span class="w"> </span><span class="kn">import</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">KeyNested</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">,</span> <span class="n">Storage</span>
@@ -1066,6 +1088,31 @@ reference waiting for the new key resolving to the same user.</p>
 <span class="k">assert</span> <span class="n">old_address</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span><span class="s2">"user_id"</span><span class="p">:</span> <span class="mi">5</span><span class="p">}</span>
 <span class="k">assert</span> <span class="n">user</span><span class="o">.</span><span class="n">addresses</span> <span class="o">==</span> <span class="p">[</span><span class="n">new_address</span><span class="p">,</span> <span class="n">old_address</span><span class="p">]</span>
 </code></pre></div>
+<h2 id="change-a-primary-key-and-its-references">Change a primary key and its references</h2>
+<p>To change a key and rewrite references in one loaded document, call
+<code>store.rekey(root, target, User.id, new_id)</code>. The root and target must use
+this storage, and the target must be reachable from the root through loaded
+<code>Nested</code> fields (or be the root). The field must be the target's actual primary
+key descriptor, and its old key must resolve to that target. An occupied new
+key raises <code>DuplicateKeyError</code>.</p>
+<p>The operation discovers scalar and list <code>KeyNested</code> records for that exact
+key field throughout the document and rewrites each occurrence of the old key.
+It preserves unpaired duplicates, list order, and custom record metadata.
+Pending references to other keys keep their stored values. An existing paired
+reference to the new key must accept the target entity type. Paired owners
+outside the root cause a <code>RelationError</code> if they would need rewriting;
+unpaired external references are outside the operation's scope and remain
+unchanged. Matching legacy <code>back_relation</code> fields and conflicting source
+aliases are rejected before any write. The primary key and references being
+rewritten must be writable. Paired duplicate and exclusive reverse
+conflicts are also rejected, including conflicts with pending references.</p>
+<p>Exclusive access and a stable, valid graph are required throughout the call.
+Key managers must implement <code>rewrite_key(record, new_key)</code> and <code>get</code> for the
+rewritten record. They receive detached copies and must confine their writes to
+those inputs. All callbacks and conflict checks finish before data or indexes
+change; callback side effects outside their inputs and concurrent changes are
+outside this guarantee. Assigning a primary key normally retains the
+behavior described in <a href="#dangling-key-references">Dangling key references</a>.</p>
 <h2 id="renumbering-a-referenced-entity">Renumbering a referenced entity</h2>
 <p>When the application knows the owners, it can keep the same Python object:
 capture the owners before changing its ID, change the ID, then reassign

@@ -643,6 +643,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -658,7 +675,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#added_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -697,7 +714,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_1" class="md-nav__link">
+  <a href="#added_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -799,6 +816,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -814,7 +848,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#added_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -853,7 +887,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_1" class="md-nav__link">
+  <a href="#added_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -936,8 +970,13 @@
 <p>All notable changes to corm are documented here. The format follows
 <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>.</p>
 <h2 id="unreleased">Unreleased</h2>
-<h2 id="005">0.0.5</h2>
 <h3 id="added">Added</h3>
+<ul>
+<li>Add document-scoped <code>Storage.rekey</code> to rewrite a primary key and its loaded
+  document references. (<a href="https://github.com/angru/corm/issues/9">#9</a>)</li>
+</ul>
+<h2 id="005">0.0.5</h2>
+<h3 id="added_1">Added</h3>
 <ul>
 <li>Omit top-level output keys with <code>entity.dict(exclude=["id"])</code>.
   (<a href="https://github.com/angru/corm/issues/7">#7</a>)</li>
@@ -952,7 +991,7 @@
   (<a href="https://github.com/angru/corm/pull/65">#65</a>)</li>
 </ul>
 <h2 id="004">0.0.4</h2>
-<h3 id="added_1">Added</h3>
+<h3 id="added_2">Added</h3>
 <ul>
 <li>Pair a <code>Nested</code> or <code>KeyNested</code> field with a reverse <code>Relationship</code> using
   <code>back_populates</code>. Editing either side updates both fields.
