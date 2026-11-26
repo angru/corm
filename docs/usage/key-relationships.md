@@ -62,3 +62,25 @@ only what that method returns.
 ```python
 --8<-- "docs/examples/key_relationships_key_manager.py"
 ```
+
+## Keeping metadata when a list changes
+
+Suppose two references to user 1 have ranks 10 and 11. Assigning a list
+containing just that user gives a key manager the same `User` object for
+either choice. If the caller needs to keep the rank-11 entry, model each
+reference as a nested entity with its own `rank` and a `KeyNested` link
+to the user. The caller can then select the exact membership to keep.
+An unresolved membership can also be kept explicitly until its user loads.
+
+```python
+--8<-- "docs/examples/key_relationships_membership.py"
+```
+
+For an existing `list[User]` field backed by object-shaped keys, choose
+the operation according to the intended edit:
+
+| Operation | Effect on the stored references |
+| --- | --- |
+| Assign a plain list, e.g. `team.users = [lee, amina]` | Rebuilds the key objects through `prepare_to_set`. Drops old references absent from the replacement, including unresolved IDs. |
+| Edit a paired field, e.g. `team.users[:] = [lee, amina]` | With `back_populates` and `required=False`, keeps the old key objects for retained users and keeps unresolved references. New users get new key objects. Duplicate targets raise `RelationError`. |
+| Edit the result of an unpaired lookup, e.g. `team.users.reverse()` | Reorders a temporary list. The stored references keep their original order and metadata. |
