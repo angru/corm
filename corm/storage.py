@@ -83,6 +83,14 @@ class Storage:
             raise DuplicateKeyError(f"{field}={value} already in storage")
         return key
 
+    def rekey(
+        self, root: Entity, target: Entity, field: object, new_key: Hashable
+    ) -> None:
+        """Rewrite a key and its references within a loaded document."""
+        from corm._rekey import rekey
+
+        rekey(self, root, target, field, new_key)
+
     def add(self, entity: Entity) -> None:
         keys = [
             self._check_primary_key(field, getattr(entity, field.name))

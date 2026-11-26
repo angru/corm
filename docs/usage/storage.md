@@ -101,13 +101,42 @@ raises `EntityNotFoundError` with the default `required=True`. Set
 `required=False` to return `None` for an unresolved single reference or
 skip unresolved keys in a list. The stored keys remain in the data.
 
-Changing the target's primary key leaves existing references at their stored
+Assigning a primary key through the entity attribute leaves existing references at their stored
 values. The example shows the old reference becoming unresolved and a
 reference waiting for the new key resolving to the same user.
 
 ```python
 --8<-- "docs/examples/storage_primary_key_change.py"
 ```
+
+## Change a primary key and its references
+
+To change a key and rewrite references in one loaded document, call
+`store.rekey(root, target, User.id, new_id)`. The root and target must use
+this storage, and the target must be reachable from the root through loaded
+`Nested` fields (or be the root). The field must be the target's actual primary
+key descriptor, and its old key must resolve to that target. An occupied new
+key raises `DuplicateKeyError`.
+
+The operation discovers scalar and list `KeyNested` records for that exact
+key field throughout the document and rewrites each occurrence of the old key.
+It preserves unpaired duplicates, list order, and custom record metadata.
+Pending references to other keys keep their stored values. An existing paired
+reference to the new key must accept the target entity type. Paired owners
+outside the root cause a `RelationError` if they would need rewriting;
+unpaired external references are outside the operation's scope and remain
+unchanged. Matching legacy `back_relation` fields and conflicting source
+aliases are rejected before any write. The primary key and references being
+rewritten must be writable. Paired duplicate and exclusive reverse
+conflicts are also rejected, including conflicts with pending references.
+
+Exclusive access and a stable, valid graph are required throughout the call.
+Key managers must implement `rewrite_key(record, new_key)` and `get` for the
+rewritten record. They receive detached copies and must confine their writes to
+those inputs. All callbacks and conflict checks finish before data or indexes
+change; callback side effects outside their inputs and concurrent changes are
+outside this guarantee. Assigning a primary key normally retains the
+behavior described in [Dangling key references](#dangling-key-references).
 
 ## Renumbering a referenced entity
 
