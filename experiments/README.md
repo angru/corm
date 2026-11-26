@@ -9,11 +9,19 @@ extra keys on each record survive the change.
 
 The two checked conflicts (an occupied ID or a duplicate membership, including
 a pending one) are rejected before any write. The experiment assumes exclusive
-access, a consistent graph and one directory per store. Its preflight covers
-these schema-specific conflicts. A general API would need a way to discover
-unpaired owners, a key-manager operation for rewriting raw records, and a
-failure policy for custom callbacks. The prototype uses a private paired-field
-writer and belongs to the research checkout.
+access, a consistent graph and one directory per store.
+
+The example's `MemberKey.rewrite_key(record, new_key)` receives a deep copy
+of a matching membership. The manager can edit that copy in place or return
+a replacement. Its `get` must read the requested ID from the result.
+All manager calls finish before the prototype updates the user, the lead,
+the membership records and their reverse index. An exception discards the
+prepared copies, including changes to nested metadata in earlier groups.
+
+This protocol assumes plain copyable document data and callbacks whose writes
+are confined to their input. External side effects are outside its scope.
+Committing the prepared changes uses internal APIs specific to the directory's
+many-to-many group relation.
 
 ## Discover unpaired owners before a rekey
 
@@ -28,5 +36,5 @@ Discovery assumes a stable document and a side-effect-free key-manager
 `get`. Its cost is linear in visited entities, fields and membership records.
 Standalone owners elsewhere in the store need their own root. Paired links
 remain discoverable via their reverse field. Keep raw indices only until the
-document changes. This read-only experiment leaves custom record rewriting
-and legacy reverse-index updates to a future write protocol.
+document changes. The write experiment above covers directory memberships. Legacy reverse-index
+updates for other schemas remain an open question.

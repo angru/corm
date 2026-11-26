@@ -4,7 +4,7 @@ from copy import deepcopy
 from typing import cast
 
 from corm import DuplicateKeyError, KeyNested, RelationError, Storage
-from docs.examples.storage_renumber_user import Directory, Group, User
+from docs.examples.storage_renumber_user import Directory, Group, MemberKey, User
 
 
 def rekey(directory: Directory, user: User, new_id: int) -> None:
@@ -19,30 +19,35 @@ def rekey(directory: Directory, user: User, new_id: int) -> None:
 
     # Capture the reverse order while the old key still resolves. Prepare every
     # replacement before writing, including conflicts in the last group.
+    field = cast(KeyNested, Group.members)
+    manager = cast(MemberKey, field.key_manager)
     changes = []
     for group in user.groups:
-        members = group.dict()["members"]
-        if any(item["user_id"] == new_id for item in members):
-            raise RelationError(f"Group already references user ID {new_id}")
-        changes.append(
-            (
-                group,
-                [
-                    {**item, "user_id": new_id} if item["user_id"] == old_id else item
-                    for item in members
-                ],
-            )
-        )
+        records = list(group._data["members"])
+        for index, record in enumerate(records):
+            key = manager.get(deepcopy(record))
+            if key == new_id:
+                raise RelationError(f"Group already references user ID {new_id}")
+            if key == old_id:
+                rewritten = manager.rewrite_key(deepcopy(record), new_id)
+                if manager.get(deepcopy(rewritten)) != new_id:
+                    raise ValueError("Rewritten membership has the wrong key")
+                records[index] = rewritten
+        changes.append((group, records))
 
     update_lead = directory.lead is user
+    old_source = field._key_source(old_id)
+    new_source = field._key_source(new_id)
+    # For this paired many-to-many schema each changed group moves one edge.
+    # Commit the prepared records without calling the key manager again.
     user.id = new_id
     if update_lead:
-        directory.lead = user
-    # The public list setter accepts entities and regenerates raw membership
-    # records. The prototype needs the internal writer to retain ranks and keys.
-    field = cast(KeyNested, Group.members)
+        directory._data["lead_id"] = new_id
     for group, records in changes:
-        field._replace_paired_data(group, records)
+        store.remove_relation(old_source, group, field)
+        store.make_relation(new_source, group, field)
+        group._data["members"] = records
+        field._mark_list_changed(group)
 
 
 def check():
@@ -52,7 +57,11 @@ def check():
             "users": [{"id": 1}, {"id": 2}],
             "lead_id": 1,
             "groups": [
-                {"members": [{"user_id": 1, "rank": 3}]},
+                {
+                    "members": [
+                        {"user_id": 1, "rank": 3, "labels": {"names": ["review"]}}
+                    ]
+                },
                 {"members": [{"user_id": 9, "rank": 1}, {"user_id": 1, "rank": 2}]},
             ],
         },
@@ -85,7 +94,7 @@ def check():
         "users": [{"id": 5}, {"id": 2}],
         "lead_id": 5,
         "groups": [
-            {"members": [{"user_id": 5, "rank": 3}]},
+            {"members": [{"user_id": 5, "rank": 3, "labels": {"names": ["review"]}}]},
             {"members": [{"user_id": 9, "rank": 1}, {"user_id": 5, "rank": 2}]},
         ],
     }
