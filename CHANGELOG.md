@@ -5,6 +5,8 @@ All notable changes to corm are documented here. The format follows
 
 ## Unreleased
 
+## 0.0.5
+
 ### Added
 
 - Omit top-level output keys with `entity.dict(exclude=["id"])`.
