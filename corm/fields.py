@@ -656,12 +656,16 @@ class _OwningRelationField(_RelationField):
         return data if self.many else (data,)
 
     def _list_revision(self, owner, size):
-        return owner._paired_list_revisions.get(self, 0)
+        revisions = owner._paired_list_revisions
+        return 0 if revisions is None else revisions.get(self, 0)
 
     def _mark_list_changed(self, owner):
         if self.many:
             revisions = owner._paired_list_revisions
-            revisions[self] = revisions.get(self, 0) + 1
+            if revisions is None:
+                owner._paired_list_revisions = {self: 1}
+            else:
+                revisions[self] = revisions.get(self, 0) + 1
 
     def _append_paired_item(self, owner, target):
         self._link(owner, self._prepare_target(owner, target))

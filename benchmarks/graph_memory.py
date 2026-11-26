@@ -23,7 +23,8 @@ def sample(count):
         tracemalloc.stop()
 
     entities = [project, *project.assignees, *project.tasks]
-    empty = [e._paired_list_revisions for e in entities if not e._paired_list_revisions]
+    revisions = (e._paired_list_revisions for e in entities)
+    empty = [value for value in revisions if value is not None and not value]
     return retained, len(empty), sum(map(sys.getsizeof, empty))
 
 

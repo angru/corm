@@ -105,12 +105,12 @@ class Entity(metaclass=EntityMeta):
     __fields__: dict[str, Field]
     _field_load_groups: tuple[tuple[Field, ...], tuple[Field, ...]]
     _paired_fields: tuple[_OwningRelationField, ...]
+    _paired_list_revisions: dict[Field, int] | None = None
     _paired_list_views: dict[Field, tuple["_PairedList"]] | None = None
 
     def __init__(self, data: dict[str, t.Any], storage: "Storage") -> None:
         self._data = data
         self.storage = storage
-        self._paired_list_revisions: dict[Field, int] = {}
 
         for paired_field in self._paired_fields:
             paired_field._resolve_pair()

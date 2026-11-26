@@ -53,7 +53,8 @@ count in bytes is taken with the graph alive after garbage collection.
 Descriptor resolution is warmed on a small graph first. Empty revision
 dictionaries are counted separately after tracing stops.
 
-To repeat the layout experiment, work in a disposable copy. Give all three
+To repeat the original layout experiment, use a disposable copy of commit
+`8e9f34e`. Give all three
 entity classes in `benchmarks/dict_vs_corm.py` an empty `__slots__ = ()` and
 run the baseline. For the second run, also give the base `Entity` slots for
 `_data`, `storage`, `_paired_list_revisions`, `_paired_list_views` and
@@ -70,3 +71,12 @@ Slots saved 320,616 bytes (3.1%) on this graph. Both layouts retained 20,017
 empty revision dictionaries with a combined shallow size of 1,281,088 bytes.
 This graph exercises a scalar paired owner and its reverse collection.
 A workload that edits owning many-valued fields can populate the dictionaries.
+
+### Allocate revision counters on first write
+
+On CPython 3.14.5 the original read workload dropped from 10,335,440 to
+8,894,224 retained bytes (13.9%). Run `python -m benchmarks.edited_graph_memory`
+for the mutation workload. It creates 10,000 owner/target pairs, removes each
+link through the owner and restores it through the reverse field. The median
+of three samples dropped from 32,187,472 to 31,467,472 bytes (2.2%). To
+compare versions, run the same benchmark scripts on both checkouts.
