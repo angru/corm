@@ -5,6 +5,11 @@ All notable changes to corm are documented here. The format follows
 
 ## Unreleased
 
+### Added
+
+- Add document-scoped `Storage.rekey` to rewrite a primary key and its loaded
+  document references. ([#9](https://github.com/angru/corm/issues/9))
+
 ## 0.0.5
 
 ### Added

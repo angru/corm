@@ -94,5 +94,5 @@ preserves the other fields, and confines any in-place edits to the copy.
 The standard key manager returns the new key directly. Custom managers that
 leave the method unimplemented continue to support normal reads and writes.
 
-This method prepares one record. The document rekey experiment uses it before
+This method prepares one record. `Storage.rekey` uses it before
 applying any changes to the graph.

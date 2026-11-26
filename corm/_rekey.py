@@ -75,3 +75,123 @@ def _prepare_paired_key_move(field, target, old_key, new_key):
             raise RelationError(f"Inconsistent source index for {field}")
         changes.append((owner, items if field.many else items[0]))
     return _PairedKeyMove(field, storage, old_source, new_source, changes)
+
+
+def rekey(storage, root, target, key_field, new_key):
+    """Prepare a document-scoped key change and commit it without callbacks."""
+    from corm.entity import Entity
+    from corm.fields import Field, Nested
+    from corm.storage import EntityRef
+
+    if not isinstance(root, Entity) or not isinstance(target, Entity):
+        raise ValueError("Root and target must be entities")
+    if root.storage is not storage or target.storage is not storage:
+        raise ValueError("Root and target must belong to this storage")
+    if (
+        not isinstance(key_field, Field)
+        or not key_field.pk
+        or not any(f is key_field for f in target.__fields__.values())
+        or not any(f is key_field for f in target.__pk_fields__ or ())
+    ):
+        raise ValueError("Field must be a primary key descriptor on the target")
+    old_key = getattr(target, key_field.name)
+    if storage.get(key_field, old_key) is not target:
+        raise RelationError("Expected the target at the old key")
+    storage._check_primary_key(key_field, new_key, entity=target)
+
+    pending = [root]
+    entities = []
+    seen = set()
+    while pending:
+        owner = pending.pop()
+        if id(owner) in seen:
+            continue
+        if owner.storage is not storage:
+            raise RelationError("Nested entity belongs to another storage")
+        seen.add(id(owner))
+        entities.append(owner)
+        for field in owner.__fields__.values():
+            if isinstance(field, Nested):
+                raw = owner._data.get(field.origin)
+                if raw is not None:
+                    children = raw if field.many else (raw,)
+                    pending.extend(
+                        child for child in children if isinstance(child, Entity)
+                    )
+    if id(target) not in seen:
+        raise ValueError("Target is not reachable from root")
+    if old_key == new_key:
+        return
+
+    # A source slot can only be rewritten through one descriptor.
+    slots = {}
+    changes = []
+    paired_fields = set()
+
+    def claim(owner, field):
+        slot = (id(owner), field.origin)
+        aliases = [f for f in owner.__fields__.values() if f.origin == field.origin]
+        if any(f is not field for f in aliases) or (
+            slot in slots and slots[slot] is not field
+        ):
+            raise RelationError(f"Conflicting field aliases for {field}")
+        slots[slot] = field
+
+    claim(target, key_field)
+    for owner in entities:
+        for field in owner.__fields__.values():
+            if (
+                not isinstance(field, KeyNested)
+                or field.related_entity_field is not key_field
+            ):
+                continue
+            raw = owner._data.get(field.origin)
+            if raw is None:
+                continue
+            items = list(raw) if field.many else [raw]
+            matches = [
+                i
+                for i, item in enumerate(items)
+                if field.key_manager.get(deepcopy(item)) == old_key
+            ]
+            if not matches:
+                continue
+            claim(owner, field)
+            if field.back_relation:
+                raise RelationError("Legacy reverse indexes are unsupported")
+            if field.back_populates is not None:
+                paired_fields.add(field)
+                continue
+            for i in matches:
+                replacement = field.key_manager.rewrite_key(deepcopy(items[i]), new_key)
+                if replacement is None and not field.many:
+                    raise RelationError(f"Expected a non-null key for {field}")
+                if field.key_manager.get(deepcopy(replacement)) != new_key:
+                    raise ValueError("Rewritten reference has the wrong key")
+                items[i] = replacement
+            changes.append((owner, field.origin, items if field.many else items[0]))
+
+    # Include indexed paired fields even when all their owners are outside root.
+    for source in storage._relations:
+        if (
+            isinstance(source, EntityRef)
+            and isinstance(source.field, KeyNested)
+            and source.field.related_entity_field is key_field
+            and source.key == old_key
+            and source.field.back_populates is not None
+        ):
+            paired_fields.add(source.field)
+    plans = []
+    for field in paired_fields:
+        owners = storage.get_related_entities(
+            field._key_source(old_key), field._declaring_owner, field
+        )
+        if any(id(owner) not in seen for owner in owners):
+            raise RelationError("Paired owner is outside the root")
+        plans.append(_prepare_paired_key_move(field, target, old_key, new_key))
+
+    storage._set_primary_key(target, key_field, new_key)
+    for owner, origin, value in changes:
+        owner._data[origin] = value
+    for plan in plans:
+        plan.commit()
