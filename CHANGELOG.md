@@ -9,6 +9,15 @@ All notable changes to corm are documented here. The format follows
 
 - Omit top-level output keys with `entity.dict(exclude=["id"])`.
   ([#7](https://github.com/angru/corm/issues/7))
+- Add runnable recipes for request-scoped storage, copying and renumbering a
+  document, and transforming input and output with FastAPI or cattrs.
+
+### Changed
+
+- Allocate paired-list revision counters on the first edit. On CPython 3.14.5,
+  retained Python allocations fell by 13.9% in the read benchmark and 2.2% in
+  the benchmark that removes and restores each link.
+  ([#65](https://github.com/angru/corm/pull/65))
 
 ## 0.0.4
 
