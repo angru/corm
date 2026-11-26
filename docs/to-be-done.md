@@ -6,8 +6,9 @@ The following proposals are candidates for stage 3. Work begins when an external
 
 - [Query API](https://github.com/angru/corm/issues/5)
 - [Exclude fields during entity creation](https://github.com/angru/corm/issues/6)
-- [Request-scoped storage](https://github.com/angru/corm/issues/49)
 - [Moving entities between storages](https://github.com/angru/corm/issues/50)
 
 For entities with the same class name in different modules, see
 [Models with the same name](usage/relationships.md#models-with-the-same-name).
+For independent requests or jobs, see
+[Storage for concurrent work](usage/storage.md#storage-for-concurrent-work).

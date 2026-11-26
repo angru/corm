@@ -6,6 +6,31 @@ Nested entities inherit their owner's storage. The storage holds strong
 references to indexed entities and relation endpoints, so they can live as
 long as the storage does, even after you drop your own references to them.
 
+## Storage for concurrent work
+
+Create the store where your application starts processing a document. Pass
+it to the functions that construct or look up its entities. An HTTP handler,
+a queue consumer and a batch job can all use the same functions. If a request
+contains two documents with independent ID spaces, give each its own store.
+
+In this example two tasks load different users with ID 7. The barrier makes
+both tasks finish registering their user before either resolves its ticket.
+Each ticket finds the user from its own document.
+
+```python
+--8<-- "docs/examples/storage_request_scope.py"
+```
+
+When a child task continues work on the same document, pass it the same
+store deliberately. For an independent job, create a fresh store in that
+job. If an application uses a Python `ContextVar` to carry the store,
+`asyncio.create_task()` copies the binding by default. The child still holds
+the same mutable `Storage` after the parent resets its binding. Resetting the
+parent's context cannot undo writes the child makes to that store.
+
+The [FastAPI recipe](../recipes/fastapi.md) shows the same ownership rule
+in a web request.
+
 ## Primary keys
 
 Mark a field with `Field(pk=True)` to register each entity by that field and
