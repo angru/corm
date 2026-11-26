@@ -5,6 +5,8 @@ All notable changes to corm are documented here. The format follows
 
 ## Unreleased
 
+## 0.0.6
+
 ### Added
 
 - Add document-scoped `Storage.rekey` to rewrite a primary key and its loaded
