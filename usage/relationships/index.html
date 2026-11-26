@@ -395,6 +395,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#models-with-the-same-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models with the same name
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Models with the same name">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reloading-a-model-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reloading a model module
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#bidirectional-relationships" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -711,6 +739,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#models-with-the-same-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models with the same name
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Models with the same name">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reloading-a-model-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reloading a model module
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#bidirectional-relationships" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -814,6 +870,44 @@ address fields through <code>user.address</code>.</p>
 <span class="k">assert</span> <span class="n">john</span><span class="o">.</span><span class="n">address</span><span class="o">.</span><span class="n">street</span> <span class="o">==</span> <span class="s2">"First"</span>
 <span class="k">assert</span> <span class="n">john</span><span class="o">.</span><span class="n">address</span><span class="o">.</span><span class="n">number</span> <span class="o">==</span> <span class="mi">1</span>
 </code></pre></div>
+<h2 id="models-with-the-same-name">Models with the same name</h2>
+<p>Suppose billing and support each define an <code>Account</code> class. Import both
+modules so their class definitions register with Corm, then give each
+<code>Nested</code> field its target's full name (<code>__module__</code> plus <code>__qualname__</code>).
+A string such as <code>"Account"</code>
+alone raises <code>RegistryError</code> when the field first resolves it and both
+classes are registered. The error lists the matching full names.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">account_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">billing</span><span class="p">,</span> <span class="n">support</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">corm</span><span class="w"> </span><span class="kn">import</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Nested</span><span class="p">,</span> <span class="n">RegistryError</span><span class="p">,</span> <span class="n">Storage</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Customer</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="n">payer</span><span class="p">:</span> <span class="n">billing</span><span class="o">.</span><span class="n">Account</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">(</span><span class="s2">"account_models.billing.Account"</span><span class="p">)</span>
+    <span class="n">contact</span><span class="p">:</span> <span class="n">support</span><span class="o">.</span><span class="n">Account</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">(</span><span class="s2">"account_models.support.Account"</span><span class="p">)</span>
+
+
+<span class="n">customer</span> <span class="o">=</span> <span class="n">Customer</span><span class="p">(</span>
+    <span class="p">{</span><span class="s2">"payer"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"invoice_email"</span><span class="p">:</span> <span class="s2">"a@example.org"</span><span class="p">},</span> <span class="s2">"contact"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"queue"</span><span class="p">:</span> <span class="s2">"returns"</span><span class="p">}},</span>
+    <span class="n">Storage</span><span class="p">(),</span>
+<span class="p">)</span>
+<span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">customer</span><span class="o">.</span><span class="n">payer</span><span class="p">)</span> <span class="ow">is</span> <span class="n">billing</span><span class="o">.</span><span class="n">Account</span>
+<span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">customer</span><span class="o">.</span><span class="n">contact</span><span class="p">)</span> <span class="ow">is</span> <span class="n">support</span><span class="o">.</span><span class="n">Account</span>
+<span class="k">assert</span> <span class="n">customer</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="o">==</span> <span class="p">{</span>
+    <span class="s2">"payer"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"invoice_email"</span><span class="p">:</span> <span class="s2">"a@example.org"</span><span class="p">},</span>
+    <span class="s2">"contact"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"queue"</span><span class="p">:</span> <span class="s2">"returns"</span><span class="p">},</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="reloading-a-model-module">Reloading a model module</h3>
+<p>Reloading <code>account_models.billing</code> registers a new class under the same
+full name. The existing payer keeps its original class. An unpaired
+<code>Nested</code> field that already resolved its target caches that class, so
+even a new <code>Customer</code> loaded in a fresh <code>Storage</code> still uses the original
+billing class. A newly declared owner with a fresh <code>Nested</code> field resolves
+the replacement. The support class keeps its identity throughout.</p>
+<p>Run <code>uv run python docs/examples/qualified_relationships.py</code> from the
+repository root to exercise the two modules, the ambiguous short name
+and the reload.</p>
 <h2 id="bidirectional-relationships">Bidirectional relationships</h2>
 <p>Set <code>back_populates</code> on the <code>Nested</code> field to name the <code>Relationship</code> on
 the related entity. Each pair has its own links, so fields such as
