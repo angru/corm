@@ -15,6 +15,7 @@ nav:
       - usage/key-relationships.md
       - usage/storage.md
   - Recipes:
+      - Accept two ID spellings and redact a nested field: recipes/document-transforms.md
       - Reassign a task with FastAPI: recipes/fastapi.md
   - Open feature requests: to-be-done.md
   - FAQ: faq.md
