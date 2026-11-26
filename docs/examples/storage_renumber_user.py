@@ -60,40 +60,43 @@ def renumber_user(directory: Directory, old_id: int, new_id: int) -> Directory:
 # --8<-- [end:migration]
 
 
-source = Directory(
-    {
-        "users": [{"id": 1}, {"id": 2}],
-        "lead_id": 1,
-        "groups": [{"members": [{"user_id": 9, "rank": 1}, {"user_id": 1, "rank": 2}]}],
-    },
-    Storage(),
-)
-before = deepcopy(source.dict())
-original = source.lead
-changed = renumber_user(source, 1, 5)
-assert changed.storage.get(User.id, 1) is None
-assert changed.storage.get(User.id, 5) is changed.lead
-assert changed.lead is not original
-assert changed.lead.groups == changed.groups
-assert changed.groups[0].members == [changed.lead]
-assert changed.dict()["groups"][0]["members"] == [
-    {"user_id": 9, "rank": 1},
-    {"user_id": 5, "rank": 2},
-]
-late_user = User({"id": 9}, changed.storage)
-assert changed.groups[0].members == [late_user, changed.lead]
+if __name__ == "__main__":
+    source = Directory(
+        {
+            "users": [{"id": 1}, {"id": 2}],
+            "lead_id": 1,
+            "groups": [
+                {"members": [{"user_id": 9, "rank": 1}, {"user_id": 1, "rank": 2}]}
+            ],
+        },
+        Storage(),
+    )
+    before = deepcopy(source.dict())
+    original = source.lead
+    changed = renumber_user(source, 1, 5)
+    assert changed.storage.get(User.id, 1) is None
+    assert changed.storage.get(User.id, 5) is changed.lead
+    assert changed.lead is not original
+    assert changed.lead.groups == changed.groups
+    assert changed.groups[0].members == [changed.lead]
+    assert changed.dict()["groups"][0]["members"] == [
+        {"user_id": 9, "rank": 1},
+        {"user_id": 5, "rank": 2},
+    ]
+    late_user = User({"id": 9}, changed.storage)
+    assert changed.groups[0].members == [late_user, changed.lead]
 
-for conflicting_id, error in [(2, DuplicateKeyError), (9, RelationError)]:
-    try:
-        renumber_user(source, 1, conflicting_id)
-    except error:
-        pass
-    else:
-        raise AssertionError(f"Expected a conflict for {conflicting_id}")
+    for conflicting_id, error in [(2, DuplicateKeyError), (9, RelationError)]:
+        try:
+            renumber_user(source, 1, conflicting_id)
+        except error:
+            pass
+        else:
+            raise AssertionError(f"Expected a conflict for {conflicting_id}")
 
-assert source.dict() == before
-assert source.storage.get(User.id, 1) is original
-assert source.storage.get(User.id, 2) is source.users[1]
-assert source.storage.get(User.id, 5) is source.storage.get(User.id, 9) is None
-assert source.lead is original and source.groups[0].members == [original]
-assert original.groups == source.groups
+    assert source.dict() == before
+    assert source.storage.get(User.id, 1) is original
+    assert source.storage.get(User.id, 2) is source.users[1]
+    assert source.storage.get(User.id, 5) is source.storage.get(User.id, 9) is None
+    assert source.lead is original and source.groups[0].members == [original]
+    assert original.groups == source.groups

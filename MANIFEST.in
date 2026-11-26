@@ -3,3 +3,4 @@ include .github/scripts/*.py
 recursive-include benchmarks *.md *.py
 recursive-include docs *.md *.py
 recursive-include tests *.py
+recursive-include experiments *.md *.py
