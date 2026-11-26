@@ -473,6 +473,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#enumerating-indexed-entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enumerating indexed entities
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#finding-the-first-matching-entity" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -794,6 +805,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#enumerating-indexed-entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enumerating indexed entities
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#finding-the-first-matching-entity" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -997,6 +1019,17 @@ primary-key field separately, so two different fields can use the same key.</p>
 <code>DuplicateKeyError</code>. Assigning a new key through an entity attribute moves
 the index entry. A conflicting assignment raises the same error and leaves
 the original key and index entry in place.</p>
+<h2 id="enumerating-indexed-entities">Enumerating indexed entities</h2>
+<p><code>store.iter_entities(User)</code> lazily yields instances of <code>User</code> and its
+subclasses registered in this store's primary-key index. Each object appears
+once by identity, even if it has multiple primary-key entries. Entities without
+an index entry and pending references are excluded.</p>
+<p>The iterator scans the live index. Index-changing writes, including adding
+entities or changing primary keys, must not overlap iteration. Result order is
+unspecified, including after rekeying. For repeatable ordering, use a stable,
+unique key, for example <code>sorted(store.iter_entities(User), key=lambda u: u.id)</code>
+when <code>id</code> meets those requirements. Collect the iterator into a list when a
+snapshot is needed.</p>
 <h2 id="finding-the-first-matching-entity">Finding the first matching entity</h2>
 <p>Choose the collection to search. A Python generator can filter a document's
 nested users, including users without primary keys. <code>next(..., None)</code> returns
