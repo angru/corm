@@ -7,13 +7,13 @@ class User(Entity):
 
 class UserKeyManager(KeyManager):
     def get(self, data: dict[str, int]) -> int:
-        return data["id"]
+        return data["entity_id"]
 
     def prepare_to_set(self, entity: Entity | None) -> dict[str, int] | None:
         if entity is None:
             return None
         assert isinstance(entity, User)
-        return {"id": entity.id}
+        return {"entity_id": entity.id}
 
 
 class Team(Entity):
@@ -25,12 +25,12 @@ class Team(Entity):
 storage = Storage()
 amina = User({"id": 123}, storage)
 lee = User({"id": 456}, storage)
-team = Team({"member_refs": [{"id": 123}]}, storage)
+team = Team({"member_refs": [{"entity_id": 123, "rank": 1}]}, storage)
 
 assert team.members == [amina]
-assert team.dict() == {"member_refs": [{"id": 123}]}
+assert team.dict() == {"member_refs": [{"entity_id": 123, "rank": 1}]}
 
 team.members = [amina, lee]
 
 assert team.members == [amina, lee]
-assert team.dict() == {"member_refs": [{"id": 123}, {"id": 456}]}
+assert team.dict() == {"member_refs": [{"entity_id": 123}, {"entity_id": 456}]}
