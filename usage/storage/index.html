@@ -473,6 +473,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#finding-the-first-matching-entity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Finding the first matching entity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#dangling-key-references" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -772,6 +783,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#finding-the-first-matching-entity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Finding the first matching entity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#dangling-key-references" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -953,6 +975,50 @@ primary-key field separately, so two different fields can use the same key.</p>
 <code>DuplicateKeyError</code>. Assigning a new key through an entity attribute moves
 the index entry. A conflicting assignment raises the same error and leaves
 the original key and index entry in place.</p>
+<h2 id="finding-the-first-matching-entity">Finding the first matching entity</h2>
+<p>Choose the collection to search. A Python generator can filter a document's
+nested users, including users without primary keys. <code>next(..., None)</code> returns
+the first match in collection order or <code>None</code> if the name is absent. Creating
+another user in the same store leaves the document's list unchanged.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">corm</span><span class="w"> </span><span class="kn">import</span> <span class="n">Entity</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">Nested</span><span class="p">,</span> <span class="n">Storage</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Directory</span><span class="p">(</span><span class="n">Entity</span><span class="p">):</span>
+    <span class="n">users</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">User</span><span class="p">]</span> <span class="o">=</span> <span class="n">Nested</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">first_named</span><span class="p">(</span><span class="n">users</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">User</span><span class="p">],</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">User</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">next</span><span class="p">((</span><span class="n">user</span> <span class="k">for</span> <span class="n">user</span> <span class="ow">in</span> <span class="n">users</span> <span class="k">if</span> <span class="n">user</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">name</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+
+
+<span class="n">store</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">()</span>
+<span class="n">directory</span> <span class="o">=</span> <span class="n">Directory</span><span class="p">({</span><span class="s2">"users"</span><span class="p">:</span> <span class="p">[{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Lee"</span><span class="p">},</span> <span class="p">{</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Lee"</span><span class="p">}]},</span> <span class="n">store</span><span class="p">)</span>
+<span class="n">other</span> <span class="o">=</span> <span class="n">User</span><span class="p">({</span><span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Amina"</span><span class="p">},</span> <span class="n">store</span><span class="p">)</span>
+
+<span class="k">assert</span> <span class="n">first_named</span><span class="p">(</span><span class="n">directory</span><span class="o">.</span><span class="n">users</span><span class="p">,</span> <span class="s2">"Lee"</span><span class="p">)</span> <span class="ow">is</span> <span class="n">directory</span><span class="o">.</span><span class="n">users</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="k">assert</span> <span class="n">first_named</span><span class="p">(</span><span class="n">directory</span><span class="o">.</span><span class="n">users</span><span class="p">,</span> <span class="s2">"Amina"</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="k">assert</span> <span class="n">first_named</span><span class="p">([</span><span class="n">other</span><span class="p">,</span> <span class="o">*</span><span class="n">directory</span><span class="o">.</span><span class="n">users</span><span class="p">],</span> <span class="s2">"Amina"</span><span class="p">)</span> <span class="ow">is</span> <span class="n">other</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Member</span><span class="p">(</span><span class="n">User</span><span class="p">):</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+<span class="n">member</span> <span class="o">=</span> <span class="n">Member</span><span class="p">({</span><span class="s2">"id"</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"Amina"</span><span class="p">},</span> <span class="n">store</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">store</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">Member</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span> <span class="ow">is</span> <span class="n">member</span>
+<span class="k">assert</span> <span class="n">store</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">Member</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span>
+</code></pre></div>
+<p>When the caller knows a primary key, <code>store.get(Member.id, 7)</code> goes directly
+to the identity index. An entity with two primary-key fields can be looked up
+through either field. A standalone user without a primary key has no entry in
+that index. For a name search, compare <code>user.name</code> on each instance. Comparing
+<code>User.name</code> to a string evaluates immediately to a boolean.</p>
 <h2 id="dangling-key-references">Dangling key references</h2>
 <p>A <code>KeyNested</code> field can be loaded before its target. Each read looks up the
 stored key in the same storage. If the key is missing, reading the field
