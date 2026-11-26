@@ -1,6 +1,6 @@
 # Open feature requests
 
-Stages 0–2 of the [roadmap](https://github.com/angru/corm/issues/26) are in `master`, including documentation and benchmarks. The [0.0.4 release preparation](https://github.com/angru/corm/pull/47) is awaiting a decision on publication.
+Stages 0–2 of the [roadmap](https://github.com/angru/corm/issues/26) shipped in [Corm 0.0.4](https://pypi.org/project/corm/0.0.4/), including documentation and benchmarks.
 
 The following proposals are candidates for stage 3. Work begins when an external user requests a feature for a concrete use case.
 
