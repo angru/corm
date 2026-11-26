@@ -92,6 +92,37 @@ reference waiting for the new key resolving to the same user.
 --8<-- "docs/examples/storage_primary_key_change.py"
 ```
 
+## Renumbering a referenced entity
+
+When the application knows the owners, it can keep the same Python object:
+capture the owners before changing its ID, change the ID, then reassign
+their key fields to the entity. The example above does this for scalar
+paired references. Include unpaired owners explicitly because they may have
+no reverse field. For a list of fully resolved plain keys, capture the
+ordered targets before the change and assign the list back afterwards.
+Whole-list assignment rebuilds the serialized keys. Omitted unresolved
+entries and extra metadata on rebuilt key objects can be lost.
+
+When a document needs all edits to succeed together, prepare a replacement
+using its known schema. In this directory, user IDs appear in three places:
+the user records, the scalar `lead_id`, and the `user_id` in each group's
+ordered membership records. Change those keys in a deep copy so ranks,
+unrelated values and pending IDs survive. Load the candidate in a fresh
+store and check required links before replacing the application's root.
+
+```python
+--8<-- "docs/examples/storage_renumber_user.py:migration"
+```
+
+The [runnable example](../examples/storage_renumber_user.py) changes user 1
+to 5. Two other attempts fail: ID 2 belongs to another user, and ID 9
+already appears as a pending member in the same paired list. The latter
+would create a duplicate membership. Both failures leave the original
+directory's data, lookups and reverse links intact. A reference already
+waiting for the new ID elsewhere can become resolved, as in the address
+example above. This application-level migration covers the directory passed
+to it and returns new Python objects.
+
 ## Manual relations
 
 Use `make_relation(from_=source, to_=target, relation_type=kind)` to add a
