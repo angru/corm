@@ -266,7 +266,6 @@ class _UnpairedKeyList(list["Entity"]):
         if owner.storage.get(field.related_entity_field, key) is not target:
             raise RelationError(f"Expected a stored target for {field}")
         records = [*(owner._data.get(field.origin) or ()), record]
-        records = [*(owner._data.get(field.origin) or ()), record]
         if field.back_relation:
             _apply_relation(
                 field,

@@ -332,6 +332,34 @@ def test_unpaired_append_preserves_records_and_pending_references():
     assert view == [first, first, second]
 
 
+def test_unpaired_append_traverses_raw_keys_once():
+    class CountingList(list):
+        iterations = 0
+
+        def __iter__(self):
+            self.iterations += 1
+            return super().__iter__()
+
+    class Target(Entity):
+        id: int = Field(pk=True)
+
+    class Owner(Entity):
+        targets: list[Target] = KeyNested(Target.id, origin="keys", many=True)
+
+    storage = Storage()
+    Target({"id": 1}, storage)
+    target = Target({"id": 2}, storage)
+    keys = CountingList([1])
+    owner = Owner({"keys": keys}, storage)
+    view = owner.targets
+    keys.iterations = 0
+
+    view.append(target)
+
+    assert keys.iterations == 1
+    assert owner.dict() == {"keys": [1, 2]}
+
+
 def test_unpaired_append_rejects_invalid_targets_without_writes():
     from corm import AccessMode, ReadOnlyFieldError, RelationError
 
